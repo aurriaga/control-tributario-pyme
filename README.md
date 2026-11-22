@@ -21,7 +21,7 @@ de Excel con macros.
   aporte del empleador con el pago a PREVIRED y completa el impuesto único y la retención en el borrador del F29.
 - **Contabilidad automática**: arma el Libro Diario con todo lo cargado (ventas, compras, sueldos, honorarios, F29 y
   banco), más la apertura y los asientos manuales; muestra el Mayor, el Balance de 8 columnas, el Estado de resultados
-  y 13 controles, aprende la categoría de gasto de cada proveedor y se descarga en Excel.
+  y los controles, aprende la categoría de gasto de cada proveedor y se descarga en Excel.
 - **Panel del mes** con lo cargado y lo que falta, y los **17 controles** automáticos; se puede **anular** un documento que
   no existe en el SII, **descargar todo en Excel** y **guardar o abrir un respaldo** para llevar el trabajo a otro computador.
 - **Resumen del año**: ventas, compras, IVA, mes a mes, principales clientes y proveedores y alertas; se descarga
