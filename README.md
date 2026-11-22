@@ -8,6 +8,9 @@ de Excel con macros.
 
 ## Qué hace hoy
 
+La app se recorre con el **menú de la izquierda**: Inicio, Cargar documentos, Por clasificar, Compras y ventas, IVA y F29,
+Personal, Banco, Contabilidad y Resumen del año (en el celular, el menú queda arriba).
+
 - **Lector de documentos**: arrastra cualquier archivo (CSV, Excel, PDF, fotos o PDF escaneados con OCR) y la app
   reconoce qué es por su contenido: RCV de compras o ventas, cartolas (y su banco), F29, F22, carpeta tributaria,
   libros de remuneraciones, boletas de honorarios y Libro Diario. No carga documentos de otra empresa.
@@ -25,6 +28,11 @@ de Excel con macros.
   y los controles, aprende la categoría de gasto de cada proveedor y se descarga en Excel.
 - **Panel del mes** con lo cargado y lo que falta, y los **17 controles** automáticos; se puede **anular** un documento que
   no existe en el SII, **descargar todo en Excel** y **guardar o abrir un respaldo** para llevar el trabajo a otro computador.
+- **Por clasificar**: junta lo que la app no pudo decidir sola (sugerencias para confirmar, movimientos del banco,
+  proveedores sin categoría y documentos con observaciones). La app **sugiere** la categoría de cada proveedor por su
+  nombre o por proveedores parecidos ya clasificados, y qué es cada movimiento del banco por su glosa o su RUT.
+- **Reglas** que se aprenden al clasificar: por glosa igual, por glosa que contiene unas palabras o por RUT; se pueden
+  editar, desactivar o borrar en Banco > Reglas aprendidas.
 - **¿Cómo funciona?**: un recorrido guiado que marca cada parte de la pantalla y la explica en palabras simples.
 - **Resumen del año**: ventas, compras, IVA, mes a mes, principales clientes y proveedores, el resultado contable en
   cascada (de las ventas al resultado) y alertas; se descarga en PDF o Excel.

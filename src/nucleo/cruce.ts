@@ -203,14 +203,52 @@ export const CATEGORIAS = ['Pago a proveedor', 'Cobro a cliente', 'Pago de impue
   'Comisiones y gastos bancarios', 'Crédito bancario (cuotas)', 'Retiro de socios', 'Aporte de socios', 'Aporte de capital',
   'Traspaso entre cuentas propias', 'Anticipo de cliente', 'Cobro consolidado de facturas', 'Otro gasto sin factura', 'Otro ingreso'] as const;
 
-export interface Regla { id: string; patron: string; categoria: string; lado: 'cargo' | 'abono' }
+/** Regla aprendida para clasificar movimientos del banco.
+ *  - igual: la glosa (sin números ni símbolos) es idéntica;
+ *  - contiene: la glosa contiene el texto (sin números ni espacios), por ejemplo "comisionmantencion";
+ *  - rut: el RUT aparece en la glosa (patron = cuerpo del RUT sin dígito verificador).
+ *  Las reglas guardadas antes de existir el tipo son "igual". */
+export type TipoRegla = 'igual' | 'contiene' | 'rut';
+export interface Regla {
+  id: string; patron: string; categoria: string; lado: 'cargo' | 'abono' | 'ambos';
+  tipo?: TipoRegla; activa?: boolean; creada?: string; texto?: string;   // texto: lo que escribió el usuario, para mostrarlo
+}
 
 /** Glosa sin números ni símbolos: "COMISION MANTENCION 0912" y "COMISION MANTENCION 1012" dan lo mismo. */
 export const patronDe = (desc: string) => normalizar(desc).replace(/\d/g, '');
 
-export function crearRegla(m: Movimiento, categoria: string, reglas: Regla[]): Regla {
+export function coincideRegla(m: Movimiento, r: Regla): boolean {
+  if (r.activa === false || !r.patron) return false;
+  if (r.lado !== 'ambos' && r.lado !== (m.abono > m.cargo ? 'abono' : 'cargo')) return false;
+  const tipo = r.tipo ?? 'igual';
+  if (tipo === 'rut') return rutsEnTexto(m.descripcion).includes(r.patron);
+  const p = patronDe(m.descripcion);
+  return tipo === 'contiene' ? p.includes(r.patron) : p === r.patron;
+}
+
+export function crearRegla(m: Movimiento, categoria: string, reglas: Regla[], op: { tipo?: TipoRegla; texto?: string; hoy?: string } = {}): Regla {
   const n = reglas.reduce((x, r) => Math.max(x, Number(r.id.slice(1)) || 0), 0) + 1;
-  return { id: `R${String(n).padStart(3, '0')}`, patron: patronDe(m.descripcion), categoria, lado: m.abono > m.cargo ? 'abono' : 'cargo' };
+  const tipo = op.tipo ?? 'igual';
+  const texto = (op.texto ?? m.descripcion).trim();
+  const patron = tipo === 'rut' ? String(Number(texto.replace(/[.\s]/g, '').split('-')[0]) || '') : patronDe(texto);
+  return { id: `R${String(n).padStart(3, '0')}`, patron, categoria, lado: m.abono > m.cargo ? 'abono' : 'cargo', tipo, activa: true,
+    creada: op.hoy ?? new Date().toISOString().slice(0, 10), texto: tipo === 'igual' ? m.descripcion.trim() : texto };
+}
+
+/** Cuántos movimientos pendientes clasificaría una regla (para mostrarlo antes de guardarla). */
+export const alcanceRegla = (r: Regla, movs: Movimiento[]) => movs.filter(m => m.estado === 'pendiente' && coincideRegla(m, r)).length;
+
+/** Después de editar, desactivar o borrar reglas: lo que clasificó una regla que ya no existe o está desactivada vuelve a
+ *  pendiente; si cambió su clasificación, se actualiza; y los pendientes se vuelven a revisar con las reglas activas. */
+export function reaplicarReglas(movs: Movimiento[], reglas: Regla[]): Movimiento[] {
+  const porId = new Map(reglas.map(r => [r.id, r]));
+  const actualizados = movs.map(m => {
+    if (m.estado !== 'clasificado' || !m.regla || !/^R\d+$/.test(m.regla)) return m;
+    const r = porId.get(m.regla);
+    if (!r || r.activa === false) { const { categoria: _c, regla: _r, ...resto } = m; void _c; void _r; return { ...resto, estado: 'pendiente' as const }; }
+    return r.categoria !== m.categoria ? { ...m, categoria: r.categoria } : m;
+  });
+  return clasificar(actualizados, reglas);
 }
 
 /** Clasifica los movimientos pendientes: pagos de F29 detectados por el cruce, pagos al personal (cargos con el RUT de un
@@ -222,8 +260,7 @@ export function clasificar(movs: Movimiento[], reglas: Regla[], pagosF29: string
     if (f29.has(m.clave)) return { ...m, estado: 'clasificado' as const, categoria: 'Pago de impuestos (F29)', regla: 'F29' };
     if (m.cargo > 0 && (/previred/i.test(m.descripcion) || rutsConDV(m.descripcion).some(c => trabajadores.has(c))))
       return { ...m, estado: 'clasificado' as const, categoria: 'Remuneraciones y cotizaciones', regla: 'Personal' };
-    const lado = m.abono > m.cargo ? 'abono' : 'cargo', p = patronDe(m.descripcion);
-    const r = reglas.find(x => x.lado === lado && x.patron && p === x.patron);
+    const r = reglas.find(x => coincideRegla(m, x));
     return r ? { ...m, estado: 'clasificado' as const, categoria: r.categoria, regla: r.id } : m;
   });
 }

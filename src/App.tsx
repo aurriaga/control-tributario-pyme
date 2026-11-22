@@ -21,6 +21,9 @@ import { panelMes, mesesConDatos, crearRespaldo, leerRespaldo, CLAVES_RESPALDO }
 import { controlesGenerales, observacionesDocumento } from './nucleo/controles';
 import { descargarTodo } from './exportar';
 import { iniciarRecorrido } from './recorrido';
+import PorClasificar from './PorClasificar';
+import { contarPorClasificar } from './nucleo/porClasificar';
+import Icono, { type NombreIcono } from './Icono';
 
 // Todo se guarda solo en este navegador (localStorage). Nada se envía a un servidor.
 const CLAVE_EMPRESA = 'ctp.empresa', CLAVE_DOCS = 'ctp.documentos', CLAVE_F29 = 'ctp.f29', CLAVE_MOVS = 'ctp.movimientos', CLAVE_REGLAS = 'ctp.reglas', CLAVE_LIBROS = 'ctp.libros', CLAVE_HON = 'ctp.honorarios', CLAVE_CONTA = 'ctp.contabilidad', CLAVE_UTM = 'ctp.utm';
@@ -35,6 +38,11 @@ const SELLO: Record<ResultadoLectura['estado'], { texto: string; clase: string }
   no_reconocido: { texto: 'No reconocido', clase: 'rojo' },
   error: { texto: 'No se pudo leer', clase: 'rojo' },
 };
+
+export type Vista = 'inicio' | 'cargar' | 'clasificar' | 'documentos' | 'iva' | 'personal' | 'banco' | 'contabilidad';
+const MENU: [Vista, string][] = [['inicio', 'Inicio'], ['cargar', 'Cargar documentos'], ['clasificar', 'Por clasificar'], ['documentos', 'Compras y ventas'],
+  ['iva', 'IVA y F29'], ['personal', 'Personal'], ['banco', 'Banco'], ['contabilidad', 'Contabilidad']];
+const vistaDeHash = (): Vista => { const h = location.hash.slice(1) as Vista; return MENU.some(([v]) => v === h) ? h : 'inicio'; };
 
 interface Ficha { id: number; archivo: string; leyendo: boolean; resultado?: ResultadoLectura }
 
@@ -54,6 +62,14 @@ export default function App() {
   const [fichas, setFichas] = useState<Ficha[]>([]);
   const [arrastrando, setArrastrando] = useState(false);
   const [verResumen, setVerResumen] = useState(false);
+  const [vista, setVista] = useState<Vista>(vistaDeHash);
+  const ir = useCallback((v: Vista) => { setVista(v); if (location.hash.slice(1) !== v) history.pushState(null, '', `#${v}`); scrollTo({ top: 0 }); }, []);
+  useEffect(() => {
+    const alCambiar = () => setVista(vistaDeHash());
+    const pedido = (e: Event) => ir((e as CustomEvent<Vista>).detail);    // el recorrido guiado cambia de vista
+    addEventListener('popstate', alCambiar); addEventListener('ctp:vista', pedido);
+    return () => { removeEventListener('popstate', alCambiar); removeEventListener('ctp:vista', pedido); };
+  }, [ir]);
   const entrada = useRef<HTMLInputElement>(null);
   const clavesRef = useRef(new Set<string>());
   const idRef = useRef(0);
@@ -69,6 +85,7 @@ export default function App() {
   const controles = useMemo(() => (empresa ? controlesGenerales({ empresa: empresa.rut, docs, f29s, movs, libros, honorarios, utm }, conta) : []), [empresa, docs, f29s, movs, libros, honorarios, utm, conta]);
   const meses = useMemo(() => mesesConDatos(docs, f29s, movs, libros), [docs, f29s, movs, libros]);
   const calcularMes = useCallback((p: string) => panelMes(p, docs, f29s, movs, libros), [docs, f29s, movs, libros]);
+  const pendientes = useMemo(() => (empresa ? contarPorClasificar(empresa, movs, docs, conta) : null), [empresa, movs, docs, conta]);
 
   async function leer(lista: FileList | File[]) {
     if (!empresa) return;
@@ -134,77 +151,121 @@ export default function App() {
     location.reload();
   }
 
+  const hay = !!(docs.length || f29s.length || movs.length || libros.length);
+  const sinDatos = (texto: string) => <SinDatos texto={texto} onCargar={() => ir('cargar')} />;
+  const nombreIcono: Record<Vista, NombreIcono> = { inicio: 'inicio', cargar: 'cargar', clasificar: 'clasificar', documentos: 'documentos', iva: 'iva', personal: 'personal', banco: 'banco', contabilidad: 'contabilidad' };
+
   return (
-    <div className="app">
-      <header className="barra">
+    <div className="app-marco">
+      <aside className="menu-lateral" aria-label="Menú principal">
         <div className="marca"><span className="timbre-logo" aria-hidden>CT</span><span>Control Tributario</span></div>
-        <div className="empresa"><strong>{empresa.razonSocial}</strong><span>RUT {empresa.rut}</span>
-          <button className="enlace" onClick={cambiarEmpresa}>Cambiar</button>
-          <button className="enlace" onClick={guardarRespaldo} title="Descarga un archivo con todo lo cargado, para guardarlo o llevarlo a otro computador">Guardar respaldo</button>
-          <button className="enlace" onClick={() => respaldoRef.current?.click()}>Abrir respaldo</button>
-          <input ref={respaldoRef} type="file" accept=".json,application/json" hidden onChange={e => { const f = e.target.files?.[0]; if (f) abrirRespaldo(f); e.target.value = ''; }} /></div>
-        <button className="boton secundario ayuda" onClick={iniciarRecorrido} title="Recorrido guiado por cada parte de la app">¿Cómo funciona?</button>
-        <button className="boton resumen" onClick={() => setVerResumen(true)} disabled={!docs.length && !f29s.length && !movs.length && !libros.length}
-          title={docs.length || f29s.length ? 'Ver cómo va la empresa en el año' : 'Carga documentos para ver el resumen'}>Resumen del año</button>
-      </header>
+        <div className="empresa-menu"><strong>{empresa.razonSocial}</strong><span>RUT {empresa.rut}</span></div>
+        <nav><ul>
+          {MENU.map(([v, t]) => (
+            <li key={v}><button className={vista === v ? 'activo' : ''} aria-current={vista === v ? 'page' : undefined} onClick={() => ir(v)}>
+              <Icono n={nombreIcono[v]} /><span>{t}</span>
+              {v === 'clasificar' && pendientes && pendientes.total > 0 && <b className="contador" aria-label={`${pendientes.total} por clasificar`}>{pendientes.total}</b>}
+            </button></li>))}
+          <li><button className="resumen-menu" onClick={() => setVerResumen(true)} disabled={!hay} title={hay ? 'Ver cómo va la empresa en el año' : 'Carga documentos para ver el resumen'}>
+            <Icono n="resumen" /><span>Resumen del año</span></button></li>
+        </ul></nav>
+        <div className="menu-pie">
+          <button onClick={iniciarRecorrido}><Icono n="ayuda" /><span>¿Cómo funciona?</span></button>
+          <button onClick={guardarRespaldo} title="Descarga un archivo con todo lo cargado, para guardarlo o llevarlo a otro computador"><Icono n="guardar" /><span>Guardar respaldo</span></button>
+          <button onClick={() => respaldoRef.current?.click()}><Icono n="abrir" /><span>Abrir respaldo</span></button>
+          <input ref={respaldoRef} type="file" accept=".json,application/json" hidden onChange={e => { const f = e.target.files?.[0]; if (f) abrirRespaldo(f); e.target.value = ''; }} />
+          <button onClick={cambiarEmpresa}><Icono n="cambiar" /><span>Cambiar empresa</span></button>
+        </div>
+      </aside>
 
-      {sinGuardar && <p className="alerta-guardado" role="alert">El navegador no pudo guardar los últimos cambios (sin espacio o almacenamiento bloqueado). Descarga un respaldo antes de cerrar la página.</p>}
-      <main>
-        <section
-          className={`bandeja${arrastrando ? ' encima' : ''}`}
-          onDragOver={e => { e.preventDefault(); setArrastrando(true); }}
-          onDragLeave={() => setArrastrando(false)}
-          onDrop={e => { e.preventDefault(); setArrastrando(false); leer(e.dataTransfer.files); }}
-          aria-label="Lector de documentos"
-        >
-          <div className="hojas" aria-hidden><i /><i /><i /></div>
-          <div className="bandeja-texto">
-            <h1>Lector de documentos</h1>
-            <p className="bajada">Suelta aquí lo que descargaste del SII, del banco o de tu sistema de sueldos. La app reconoce cada documento por su contenido y te dice qué entendió.</p>
-            <button className="boton grande" onClick={() => entrada.current?.click()}>Elegir archivos</button>
-            <input ref={entrada} type="file" multiple hidden onChange={e => { if (e.target.files) leer(e.target.files); e.target.value = ''; }} />
-            <p className="formatos">Lee CSV, Excel, PDF y fotos o PDF escaneados. Los archivos no salen de tu navegador.</p>
-          </div>
-        </section>
+      <main className="contenido">
+        {sinGuardar && <p className="alerta-guardado" role="alert">El navegador no pudo guardar los últimos cambios (sin espacio o almacenamiento bloqueado). Descarga un respaldo antes de cerrar la página.</p>}
 
-        {fichas.length > 0 && (
-          <section className="mesa" aria-live="polite">
-            <div className="mesa-titulo"><h2>Lo que entendí</h2><button className="enlace" onClick={() => setFichas([])}>Limpiar la mesa</button></div>
-            <div className="fichas">{fichas.map(f => <FichaDoc key={f.id} f={f} />)}</div>
+        {vista === 'inicio' && (<>
+          {pendientes && pendientes.total > 0 && (
+            <section className="libros llamado">
+              <div><h2>Tienes {pendientes.total} cosas por clasificar</h2>
+                <p className="vacio sin-margen">{[pendientes.banco && `${pendientes.banco} movimientos del banco`, pendientes.proveedores && `${pendientes.proveedores} proveedores sin categoría`, pendientes.documentos && `${pendientes.documentos} documentos con observaciones`].filter(Boolean).join(', ')}.</p></div>
+              <button className="boton" onClick={() => ir('clasificar')}>Ir a Por clasificar</button>
+            </section>)}
+          {meses.length > 0 ? <PanelMes meses={meses} sugerido={meses.find(m => docs.some(d => d.estado !== 'ANULADA' && periodoDe(d) === m)) ?? meses[0]} calcular={calcularMes} controles={controles}
+            onDescargar={() => descargarTodo({ empresa, docs, f29s, movs, libros, honorarios, cfg: conta, controles })} />
+            : sinDatos('Bienvenido. Para empezar, carga lo que descargas del SII (RCV de compras y ventas, F29), las cartolas del banco y los libros de sueldos.')}
+        </>)}
+
+        {vista === 'cargar' && (<>
+          <section
+            className={`bandeja${arrastrando ? ' encima' : ''}`}
+            onDragOver={e => { e.preventDefault(); setArrastrando(true); }}
+            onDragLeave={() => setArrastrando(false)}
+            onDrop={e => { e.preventDefault(); setArrastrando(false); leer(e.dataTransfer.files); }}
+            aria-label="Lector de documentos"
+          >
+            <div className="hojas" aria-hidden><i /><i /><i /></div>
+            <div className="bandeja-texto">
+              <h1>Lector de documentos</h1>
+              <p className="bajada">Suelta aquí lo que descargaste del SII, del banco o de tu sistema de sueldos. La app reconoce cada documento por su contenido y te dice qué entendió.</p>
+              <button className="boton grande" onClick={() => entrada.current?.click()}>Elegir archivos</button>
+              <input ref={entrada} type="file" multiple hidden onChange={e => { if (e.target.files) leer(e.target.files); e.target.value = ''; }} />
+              <p className="formatos">Lee CSV, Excel, PDF y fotos o PDF escaneados. Los archivos no salen de tu navegador.</p>
+            </div>
           </section>
-        )}
+          {fichas.length > 0 && (
+            <section className="mesa" aria-live="polite">
+              <div className="mesa-titulo"><h2>Lo que entendí</h2><button className="enlace" onClick={() => setFichas([])}>Limpiar la mesa</button></div>
+              <div className="fichas">{fichas.map(f => <FichaDoc key={f.id} f={f} />)}</div>
+            </section>
+          )}
+        </>)}
 
-        {meses.length > 0 && <PanelMes meses={meses} sugerido={meses.find(m => docs.some(d => d.estado !== 'ANULADA' && periodoDe(d) === m)) ?? meses[0]} calcular={calcularMes} controles={controles}
-          onDescargar={() => descargarTodo({ empresa, docs, f29s, movs, libros, honorarios, cfg: conta, controles })} />}
+        {vista === 'clasificar' && (hay ? <PorClasificar empresa={empresa} movs={movs} docs={docs} reglas={reglas} cfg={conta}
+          onCambio={(m, d, r) => { setMovs(m); if (d) setDocs(d); if (r) setReglas(r); }} onCfg={setConta}
+          onDoc={d => setDocs(ds => ds.map(x => (x.clave === d.clave ? d : x)))} /> : sinDatos('Cuando cargues documentos, aquí aparecerá lo que la app no pudo clasificar sola.'))}
 
-        <section className="libros">
-          <h2>Compras y ventas cargadas</h2>
-          {porPeriodo.length === 0 ? <p className="vacio">Todavía no hay documentos. Empieza por los RCV de compras y ventas del SII.</p> : (<>
-            <table>
-              <thead><tr><th>Mes</th><th className="n">Ventas netas</th><th className="n">Compras netas</th><th className="n">Diferencia</th><th className="n">Documentos</th></tr></thead>
-              <tbody>{porPeriodo.map(p => (
-                <tr key={p.periodo}><td>{periodoLegible(p.periodo)}</td><td className="n">{pesos(p.ventas)}</td><td className="n">{pesos(p.compras)}</td>
-                  <td className={`n ${p.ventas - p.compras < 0 ? 'neg' : ''}`}>{pesos(p.ventas - p.compras)}</td><td className="n">{p.nV + p.nC}</td></tr>))}</tbody>
-            </table>
-            <details className="detalle"><summary>Ver los {docs.length} documentos</summary><TablaDocs docs={docs} onCambio={d => setDocs(ds => ds.map(x => (x.clave === d.clave ? d : x)))} /></details>
-            <button className="enlace peligro" onClick={() => { if (confirm('¿Borrar todos los documentos y F29 cargados en este navegador?')) { setDocs([]); setF29s([]); } }}>Borrar documentos cargados</button>
-          </>)}
-        </section>
+        {vista === 'documentos' && (
+          <section className="libros compras-ventas">
+            <h2>Compras y ventas</h2>
+            {porPeriodo.length === 0 ? <p className="vacio">Todavía no hay documentos. Empieza por los RCV de compras y ventas del SII.</p> : (<>
+              <table>
+                <thead><tr><th>Mes</th><th className="n">Ventas netas</th><th className="n">Compras netas</th><th className="n">Diferencia</th><th className="n">Documentos</th></tr></thead>
+                <tbody>{porPeriodo.map(p => (
+                  <tr key={p.periodo}><td>{periodoLegible(p.periodo)}</td><td className="n">{pesos(p.ventas)}</td><td className="n">{pesos(p.compras)}</td>
+                    <td className={`n ${p.ventas - p.compras < 0 ? 'neg' : ''}`}>{pesos(p.ventas - p.compras)}</td><td className="n">{p.nV + p.nC}</td></tr>))}</tbody>
+              </table>
+              <details className="detalle"><summary>Ver los {docs.length} documentos</summary><TablaDocs docs={docs} onCambio={d => setDocs(ds => ds.map(x => (x.clave === d.clave ? d : x)))} /></details>
+              <button className="enlace peligro" onClick={() => { if (confirm('¿Borrar todos los documentos y F29 cargados en este navegador?')) { setDocs([]); setF29s([]); } }}>Borrar documentos cargados</button>
+            </>)}
+          </section>)}
 
-        {(docs.length > 0 || f29s.length > 0) && <PanelIVA docs={docs} f29s={f29s} libros={libros} honorarios={honorarios} utmUsuario={utm} onUtm={setUtm} />}
-        {(libros.length > 0 || honorarios.length > 0) && <PanelPersonal libros={libros} honorarios={honorarios} movs={movs}
-          onBorrar={() => { if (confirm('¿Borrar los libros de remuneraciones y los honorarios cargados?')) { setLibros([]); setHonorarios([]); } }} />}
-        {movs.length > 0 && <PanelBanco movs={movs} docs={docs} f29s={f29s} reglas={reglas} libros={libros} rutEmpresa={empresa.rut}
-          plan={conta.plan} onNuevaCuenta={c => setConta(x => ({ ...x, plan: [...x.plan, c] }))}
+        {vista === 'iva' && (docs.length > 0 || f29s.length > 0 ? <PanelIVA docs={docs} f29s={f29s} libros={libros} honorarios={honorarios} utmUsuario={utm} onUtm={setUtm} />
+          : sinDatos('Carga los RCV y los F29 (PDF) para cuadrar el IVA y armar el borrador del próximo F29.'))}
+
+        {vista === 'personal' && (libros.length > 0 || honorarios.length > 0 ? <PanelPersonal libros={libros} honorarios={honorarios} movs={movs}
+          onBorrar={() => { if (confirm('¿Borrar los libros de remuneraciones y los honorarios cargados?')) { setLibros([]); setHonorarios([]); } }} />
+          : sinDatos('Carga los libros de remuneraciones de cada mes y el informe de boletas de honorarios del SII.'))}
+
+        {vista === 'banco' && (movs.length > 0 ? <PanelBanco movs={movs} docs={docs} f29s={f29s} reglas={reglas} libros={libros} rutEmpresa={empresa.rut}
+          onIrClasificar={() => ir('clasificar')}
           onCambio={(m, d, r) => { setMovs(m); if (d) setDocs(d); if (r) setReglas(r); }}
           onBorrar={() => { if (confirm('¿Borrar los movimientos del banco y las reglas? Las facturas marcadas como pagadas o cobradas vuelven a quedar pendientes.')) {
-            setMovs([]); setReglas([]); setDocs(ds => ds.map(d => (d.fechaPago ? { ...d, estado: d.libro === 'VENTA' ? 'POR COBRAR' : 'POR PAGAR', fechaPago: undefined } : d))); } }} />}
-        {(docs.length > 0 || movs.length > 0) && <PanelContabilidad empresa={empresa.rut} docs={docs} f29s={f29s} movs={movs} libros={libros} honorarios={honorarios}
-          cfg={conta} onCfg={setConta} controles={controles} />}
+            setMovs([]); setReglas([]); setDocs(ds => ds.map(d => (d.fechaPago ? { ...d, estado: d.libro === 'VENTA' ? 'POR COBRAR' : 'POR PAGAR', fechaPago: undefined } : d))); } }} />
+          : sinDatos('Carga las cartolas del banco (Excel, CSV o PDF) para ver los movimientos y saber qué factura paga cada uno.'))}
+
+        {vista === 'contabilidad' && (docs.length > 0 || movs.length > 0 ? <PanelContabilidad empresa={empresa.rut} docs={docs} f29s={f29s} movs={movs} libros={libros} honorarios={honorarios}
+          cfg={conta} onCfg={setConta} controles={controles} /> : sinDatos('La contabilidad se arma sola cuando cargas documentos.'))}
       </main>
 
       {verResumen && <ResumenAnio docs={docs} f29s={f29s} movs={movs} libros={libros} honorarios={honorarios} empresa={empresa} cfg={conta} controles={controles} onCerrar={() => setVerResumen(false)} />}
     </div>
+  );
+}
+
+function SinDatos({ texto, onCargar }: { texto: string; onCargar: () => void }) {
+  return (
+    <section className="libros sin-datos">
+      <p className="bajada chica">{texto}</p>
+      <button className="boton" onClick={onCargar}>Cargar documentos</button>
+    </section>
   );
 }
 

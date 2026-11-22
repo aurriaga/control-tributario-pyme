@@ -116,7 +116,10 @@ async function cmdRevisar() {
 
 function respaldoApp(mem: MemoriaContable, docs: Documento[], d: Datos, movs: Movimiento[], cfg: ReturnType<typeof revisar>['aplicada']['cfg']) {
   const datos: Record<string, unknown> = {
-    'ctp.empresa': mem.empresa, 'ctp.documentos': docs, 'ctp.f29': d.f29s as F29[], 'ctp.movimientos': movs, 'ctp.reglas': [],
+    'ctp.empresa': mem.empresa, 'ctp.documentos': docs, 'ctp.f29': d.f29s as F29[], 'ctp.movimientos': movs,
+    // las reglas del robot pasan a la app: por glosa contenida o por RUT
+    'ctp.reglas': mem.reglas.map(r => ({ id: r.id, patron: r.tipo === 'rut' ? String(Number(r.patron.replace(/\./g, '').split('-')[0])) : r.patron, categoria: r.categoria,
+      lado: r.lado, tipo: r.tipo === 'rut' ? 'rut' : 'contiene', activa: r.activa, creada: r.fecha, texto: r.patron })),
     'ctp.libros': d.libros as LibroRemuneraciones[], 'ctp.honorarios': d.honorarios as MesHonorarios[], 'ctp.utm': mem.utm ?? {}, 'ctp.contabilidad': cfg,
   };
   return datos;

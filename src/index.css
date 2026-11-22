@@ -288,3 +288,53 @@ tr.anulada td.estado-doc { text-decoration: none; }
 #recorrido-globo .ant { background: var(--anil-suave); color: var(--anil); }
 #recorrido-globo .salir { background: none; color: var(--tenue); text-decoration: underline; padding: 9px 6px; }
 @media print { #recorrido-marco, #recorrido-globo { display: none !important; } }
+
+/* Marco con menú lateral: una sección a la vez */
+.app-marco { display: grid; grid-template-columns: 252px minmax(0, 1fr); min-height: 100vh; }
+.menu-lateral { position: sticky; top: 0; height: 100vh; overflow-y: auto; display: flex; flex-direction: column; gap: 14px;
+  padding: 20px 14px; background: var(--hoja); border-right: 1px solid var(--linea); }
+.menu-lateral .marca { padding: 0 6px; }
+.empresa-menu { display: grid; gap: 2px; padding: 10px 10px 12px; border-radius: 12px; background: var(--papel); font-size: 14px; }
+.empresa-menu strong { font: 700 15px var(--titulo); overflow-wrap: anywhere; }
+.empresa-menu span { color: var(--tenue); }
+.menu-lateral ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.menu-lateral button { width: 100%; display: flex; align-items: center; gap: 10px; padding: 9px 10px; border: 0; border-radius: 10px;
+  background: none; color: var(--grafito); font-size: 15px; text-align: left; cursor: pointer; }
+.menu-lateral button:hover:not(:disabled) { background: var(--papel); }
+.menu-lateral button.activo { background: var(--anil); color: #fff; font-weight: 700; }
+.menu-lateral button:disabled { opacity: .45; cursor: not-allowed; }
+.menu-lateral .icono { flex: none; }
+.menu-lateral .contador { margin-left: auto; min-width: 26px; padding: 1px 7px; border-radius: 999px; background: var(--ambar); color: #fff; font-size: 12px; text-align: center; }
+.menu-lateral button.activo .contador { background: #fff; color: var(--anil); }
+.menu-pie { margin-top: auto; display: grid; gap: 2px; padding-top: 12px; border-top: 1px solid var(--linea); }
+.menu-pie button { font-size: 14px; color: var(--tenue); }
+.contenido { padding: 24px 28px 80px; max-width: 1180px; width: 100%; }
+.contenido > :first-child { margin-top: 0; }
+.contenido > .libros { margin-top: 24px; }
+.contenido > .libros:first-child, .contenido > .alerta-guardado + .libros { margin-top: 0; }
+.llamado { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; border-left: 6px solid var(--ambar); }
+.llamado h2 { font-size: 22px; margin: 0 0 4px; }
+.sin-datos { display: grid; gap: 4px; justify-items: start; }
+.sin-margen { margin: 0; }
+.segmentos { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin: 4px 0 18px; }
+.segmentos button { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border-radius: 14px;
+  border: 2px solid var(--linea); background: var(--papel); text-align: left; cursor: pointer; font-size: 15px; }
+.segmentos button b { font: 800 20px var(--titulo); color: var(--ambar); }
+.segmentos button b.cero { color: var(--verde); }
+.segmentos button.activo { border-color: var(--anil); background: var(--anil-suave); font-weight: 700; }
+.regla-opciones { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 8px; font-size: 14px; }
+.regla-opciones select, .regla-opciones input:not([type]) { padding: 5px 10px; border-radius: 10px; border: 2px solid var(--linea); background: var(--hoja); }
+.regla-opciones input:not([type]) { min-width: 220px; }
+.reglas select { padding: 5px 8px; border-radius: 8px; border: 2px solid var(--linea); background: var(--papel); max-width: 260px; }
+tr.apagada td { opacity: .5; }
+@media (max-width: 900px) {
+  .app-marco { grid-template-columns: 1fr; }
+  .menu-lateral { position: sticky; top: 0; z-index: 5; height: auto; flex-direction: row; align-items: center; gap: 8px; padding: 8px 10px;
+    overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--linea); }
+  .menu-lateral .marca span:last-child, .empresa-menu { display: none; }
+  .menu-lateral ul, .menu-pie { display: flex; gap: 4px; margin: 0; padding: 0; border: 0; }
+  .menu-lateral button { width: auto; white-space: nowrap; padding: 8px 10px; }
+  .menu-pie button span { display: none; }
+  .contenido { padding: 16px 16px 60px; }
+}
+@media print { .menu-lateral { display: none !important; } .app-marco { display: block; } .app-marco > *:not(.velo) { display: none !important; } }
