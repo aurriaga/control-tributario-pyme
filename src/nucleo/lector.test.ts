@@ -62,6 +62,14 @@ describe('lector de documentos', () => {
     expect(x.formato).toBe('planilla');
   });
 
+  it('una planilla de trabajo con movimientos sin saldo ni cuenta no se carga como cartola', async () => {
+    const csv = 'Fecha;Descripción;Cargo;Abono;Saldo\n02-01-2026;Transf a Juan Perez;;1100600;\n05-01-2026;Pago Previred;;250000;\n';
+    const r = await leerArchivo('Revision_trabajo.csv', new TextEncoder().encode(csv), await ctx());
+    expect(r.clasificacion.tipo).toBe('CARTOLA');
+    expect(r.estado).toBe('reconocido');
+    expect(r.movimientos).toBeUndefined();
+    expect(r.mensaje).toMatch(/no trae saldos ni número de cuenta/);
+  });
   it('un archivo sin relación se informa como no reconocido', async () => {
     const r = await leerArchivo('notas.txt', new TextEncoder().encode('Lista del supermercado\nleche\npan'), await ctx());
     expect(r.estado).toBe('no_reconocido');

@@ -27,6 +27,21 @@ de Excel con macros.
 - **Resumen del año**: ventas, compras, IVA, mes a mes, principales clientes y proveedores, el resultado contable en
   cascada (de las ventas al resultado) y alertas; se descarga en PDF o Excel.
 
+## Robot contable
+
+Para llevar la contabilidad desde la línea de comandos, por ejemplo con un agente que pregunta lo dudoso:
+
+```bash
+npm run robot -- revisar  --carpeta <documentos> --memoria <memoria.json> --salida <carpeta> [--rut 77.777.777-7 --nombre "Empresa"]
+npm run robot -- aprender --memoria <memoria.json> --decision '{"tipo":"proveedor","rut":"79.000.001-3","categoria":"Arriendos"}'
+npm run robot -- memoria  --memoria <memoria.json>
+```
+
+`revisar` lee todos los documentos de la carpeta, aplica la **memoria contable** (lo que ya se decidió), arma la
+contabilidad y deja `informe.md`, `dudas.json` y `respaldo_app.json` (se abre en la app con "Abrir respaldo").
+`aprender` guarda cada respuesta: reglas por glosa o RUT, clasificaciones, cruces, categorías de proveedores y
+documentos anulados. La memoria y los documentos quedan en las carpetas que indiques; no van al repositorio.
+
 El avance de la migración está en [PLAN.md](PLAN.md).
 
 ## Desarrollo

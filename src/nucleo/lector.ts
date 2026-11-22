@@ -95,6 +95,13 @@ export async function leerArchivo(nombre: string, bytes: Uint8Array, ctx: Contex
     const c = leerCartola(nombre, contenido, cl.banco);
     res.avisos.push(...c.avisos);
     if (!c.movimientos.length) { res.mensaje = c.mensaje; return res; }
+    // Sin saldos ni número de cuenta no se puede comprobar contra el banco ni saber si cada monto sale o entra:
+    // suele ser una planilla de trabajo con movimientos copiados, no la cartola del banco.
+    if (!c.cuenta && c.movimientos.every(m => m.saldo === null)) {
+      res.titulo = 'Listado de movimientos sin saldo';
+      res.mensaje = `Tiene ${c.movimientos.length} movimientos, pero no trae saldos ni número de cuenta, así que no se puede cuadrar con el banco. No se cargó: usa la cartola descargada del banco.`;
+      return res;
+    }
     res.estado = 'leido';
     res.movimientos = c.movimientos;
     res.titulo = `Cartola${cl.banco ? ' ' + cl.banco : ''}${c.cuenta ? ', cuenta ' + c.cuenta : ''}${cl.periodo ? ', ' + periodoLegible(cl.periodo) : ''}`;

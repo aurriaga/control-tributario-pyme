@@ -8,7 +8,7 @@ import { librosFaltantes } from './remuneraciones';
 import { rutValido } from './rut';
 import { contabilidad, type ConfigContable, type Control, type Entradas } from './contabilidad';
 
-const $ = (n: number) => '$' + (Math.round(n) || 0).toLocaleString('de-DE');
+const $ = (n: number) => (Math.round(n) < 0 ? '−$' : '$') + Math.abs(Math.round(n)).toLocaleString('de-DE');
 const TOL = 1;
 
 /** Observaciones de un documento (como la columna "Observaciones Control" del Excel). Vacío = OK. */
