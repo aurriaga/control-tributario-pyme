@@ -29,6 +29,7 @@ export interface Documento {
   origen: string;           // "RCV <nombre del archivo>"
   observacion: string;
   periodoRCV: string;       // AAAA-MM del archivo del SII ('' si no viene en el nombre)
+  categoria?: string;       // compras: categoría de gasto puesta a mano (si no, la aprendida para el proveedor)
 }
 
 export interface Empresa { rut: string; razonSocial: string }
