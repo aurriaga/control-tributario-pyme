@@ -144,7 +144,9 @@ export function buscarDudas(a: Aplicada, d: Datos, mem: MemoriaContable, sugeren
   for (const x of a.docs.filter(y => y.empresa === mem.empresa.rut && y.estado !== 'ANULADA' && observacionesDocumento(y).length))
     dudas.push({ id: `D-${dudas.length + 1}`, tipo: 'documento', pregunta: `${x.libro === 'VENTA' ? 'Venta' : 'Compra'} folio ${x.folio} de ${x.razonSocial}: ${observacionesDocumento(x).join(' ')} ¿Es correcto o hay que anularlo?`,
       detalle: `Neto ${$(x.neto)}, IVA ${$(x.iva)}, total ${$(x.total)}.`, monto: x.total, fecha: x.fechaEmision, opciones: ['Está correcto', 'Anular'], claves: [x.clave] });
-  return dudas;
+  // De mayor a menor monto (lo que más mueve el resultado primero); el identificador dice el tipo y el orden
+  const pref: Record<TipoDuda, string> = { movimiento: 'M', cruce: 'C', categoria: 'P', documento: 'D' };
+  return dudas.sort((x, y) => Math.abs(y.monto) - Math.abs(x.monto)).map((x, i) => ({ ...x, id: `${pref[x.tipo]}-${i + 1}` }));
 }
 const sumAbs = (ms: Movimiento[]) => ms.reduce((s, m) => s + Math.abs(m.abono - m.cargo), 0);
 

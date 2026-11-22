@@ -28,14 +28,24 @@ const salir = (msg: string): never => { console.error(`ERROR: ${msg}`); process.
 const $ = (n: number) => (n < 0 ? '−$' : '$') + Math.round(Math.abs(n)).toLocaleString('de-DE');
 const EXT = new Set(['.csv', '.txt', '.xlsx', '.xls', '.pdf']);     // el .xlsm de macros no se lee
 
+/** Lee texto quitando el BOM que agrega PowerShell 5.1 al guardar en UTF-8. */
+const leerTexto = (ruta: string) => readFileSync(ruta, 'utf8').replace(/^\uFEFF/, '');
 function leerMemoria(ruta: string): MemoriaContable {
-  try { return validarMemoria(JSON.parse(readFileSync(ruta, 'utf8'))); } catch (e) { return salir(`No se pudo leer la memoria ${ruta}: ${(e as Error).message}`); }
+  try { return validarMemoria(JSON.parse(leerTexto(ruta))); } catch (e) { return salir(`No se pudo leer la memoria ${ruta}: ${(e as Error).message}`); }
 }
-/** Guarda la memoria dejando una copia de la versión anterior al lado (memoria.anterior.json). */
+/** Guarda la memoria solo si cambió, dejando la versión anterior al lado (memoria_contable.anterior.json). */
 function guardarMemoria(ruta: string, m: MemoriaContable) {
+  const nuevo = JSON.stringify(m, null, 1);
+  if (existsSync(ruta) && leerTexto(ruta) === nuevo) return false;
   mkdirSync(dirname(resolve(ruta)), { recursive: true });
   if (existsSync(ruta)) copyFileSync(ruta, ruta.replace(/\.json$/i, '') + '.anterior.json');
-  writeFileSync(ruta, JSON.stringify(m, null, 1));
+  writeFileSync(ruta, nuevo);
+  return true;
+}
+/** Antes de reescribir un resultado, guarda el de la corrida anterior (informe.anterior.md, dudas.anterior.json). */
+function conAnterior(ruta: string, contenido: string) {
+  if (existsSync(ruta)) copyFileSync(ruta, ruta.replace(/(\.\w+)$/, '.anterior$1'));
+  writeFileSync(ruta, contenido);
 }
 
 async function cmdRevisar() {
@@ -67,11 +77,13 @@ async function cmdRevisar() {
   d.libros.sort((a, b) => a.periodo.localeCompare(b.periodo));
 
   const r = revisar(d, mem);
-  guardarMemoria(rutaMem, r.mem);
+  const memoriaCambio = guardarMemoria(rutaMem, r.mem);
   const a = r.aplicada;
   const controles = controlesGenerales({ empresa: mem.empresa.rut, docs: a.docs, f29s: d.f29s, movs: a.movs, libros: d.libros, honorarios: d.honorarios, utm: r.mem.utm ?? {} }, a.cfg);
   mkdirSync(salida, { recursive: true });
-  writeFileSync(join(salida, 'dudas.json'), JSON.stringify(r.dudas, null, 1));
+  const rutaDudas = join(salida, 'dudas.json');
+  const dudasAntes = existsSync(rutaDudas) ? (JSON.parse(leerTexto(rutaDudas)) as unknown[]).length : null;
+  conAnterior(rutaDudas, JSON.stringify(r.dudas, null, 1));
   writeFileSync(join(salida, 'respaldo_app.json'), JSON.stringify(crearRespaldo(respaldoApp(r.mem, a.docs, d, a.movs, a.cfg))));
   const b = r.conta.balance, ok = controles.filter(c => c.estado === 'OK').length;
   const porTipo = (t: string) => r.dudas.filter(x => x.tipo === t).length;
@@ -95,8 +107,8 @@ async function cmdRevisar() {
     `${porTipo('movimiento')} grupos de movimientos sin identificar, ${porTipo('cruce')} cruces por confirmar, ${porTipo('categoria')} proveedores sin categoría y ${porTipo('documento')} documentos con observaciones. Detalle en dudas.json.`, '',
     'Para ver todo en la app: "Abrir respaldo" y elegir respaldo_app.json (reemplaza lo que haya en ese navegador).',
   ].join('\n');
-  writeFileSync(join(salida, 'informe.md'), informe);
-  console.log(JSON.stringify({ archivosLeidos: leidos.length, omitidos: omitidos.length, documentos: d.docs.length, movimientos: d.movs.length,
+  conAnterior(join(salida, 'informe.md'), informe);
+  console.log(JSON.stringify({ memoriaCambio, dudasAntes, archivosLeidos: leidos.length, omitidos: omitidos.length, documentos: d.docs.length, movimientos: d.movs.length,
     resultado: b.resultado, cuadra: b.cuadra, controlesOK: `${ok}/${controles.length}`, altasAceptadas: r.altasAceptadas,
     dudas: { total: r.dudas.length, movimiento: porTipo('movimiento'), cruce: porTipo('cruce'), categoria: porTipo('categoria'), documento: porTipo('documento') },
     salida: resolve(salida) }, null, 1));
@@ -112,7 +124,7 @@ function respaldoApp(mem: MemoriaContable, docs: Documento[], d: Datos, movs: Mo
 
 function cmdAprender() {
   const rutaMem = opt('memoria') ?? salir('Falta --memoria');
-  const texto = opt('decision') ?? (opt('decisiones') ? readFileSync(opt('decisiones')!, 'utf8') : salir('Falta --decision o --decisiones'));
+  const texto = opt('decision') ?? (opt('decisiones') ? leerTexto(opt('decisiones')!) : salir('Falta --decision o --decisiones'));
   let lista: Decision[];
   try { const x = JSON.parse(texto); lista = Array.isArray(x) ? x : [x]; } catch { return salir('La decisión no es JSON válido.'); }
   let mem = leerMemoria(rutaMem);
