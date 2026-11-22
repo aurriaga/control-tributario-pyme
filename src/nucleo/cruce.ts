@@ -199,9 +199,9 @@ export function aplicarCruces(aceptadas: Sugerencia[], docs: Documento[], movs: 
 }
 
 // ------------------------------------------------------------------ clasificación de movimientos sin factura
-export const CATEGORIAS = ['Pago de impuestos (F29)', 'Remuneraciones y cotizaciones', 'Honorarios', 'Comisiones y gastos bancarios',
-  'Crédito bancario (cuotas)', 'Retiro de socios', 'Aporte de socios', 'Traspaso entre cuentas propias', 'Anticipo de cliente',
-  'Otro gasto sin factura', 'Otro ingreso'] as const;
+export const CATEGORIAS = ['Pago a proveedor', 'Cobro a cliente', 'Pago de impuestos (F29)', 'Remuneraciones y cotizaciones', 'Honorarios',
+  'Comisiones y gastos bancarios', 'Crédito bancario (cuotas)', 'Retiro de socios', 'Aporte de socios', 'Aporte de capital',
+  'Traspaso entre cuentas propias', 'Anticipo de cliente', 'Cobro consolidado de facturas', 'Otro gasto sin factura', 'Otro ingreso'] as const;
 
 export interface Regla { id: string; patron: string; categoria: string; lado: 'cargo' | 'abono' }
 

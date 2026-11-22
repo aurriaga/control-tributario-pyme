@@ -19,6 +19,9 @@ de Excel con macros.
   aprende la regla.
 - Lee los **libros de remuneraciones** y el **informe de boletas de honorarios** del SII: controla cada fila, calcula el
   aporte del empleador con el pago a PREVIRED y completa el impuesto único y la retención en el borrador del F29.
+- **Contabilidad automática**: arma el Libro Diario con todo lo cargado (ventas, compras, sueldos, honorarios, F29 y
+  banco), más la apertura y los asientos manuales; muestra el Mayor, el Balance de 8 columnas, el Estado de resultados
+  y 13 controles, aprende la categoría de gasto de cada proveedor y se descarga en Excel.
 - **Resumen del año**: ventas, compras, IVA, mes a mes, principales clientes y proveedores y alertas; se descarga
   en PDF o Excel.
 

@@ -162,7 +162,7 @@ const mesAnterior = (p: string) => { const [y, m] = p.split('-').map(Number); re
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const mesTexto = (p: string) => `${MESES[Number(p.slice(5, 7)) - 1]} ${p.slice(0, 4)}`;
 const fechaTexto = (iso: string) => `${iso.slice(8, 10)}-${iso.slice(5, 7)}-${iso.slice(0, 4)}`;
-const $ = (n: number) => '$' + Math.round(n).toLocaleString('de-DE');
+const $ = (n: number) => '$' + (Math.round(n) || 0).toLocaleString('de-DE');
 const soloDig = (s: string) => s.replace(/\D/g, '');
 export const MARCA_CONSOLIDADO = 'COBRO CONSOLIDADO';
 

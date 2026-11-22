@@ -13,9 +13,11 @@ import PanelBanco from './PanelBanco';
 import PanelPersonal from './PanelPersonal';
 import type { LibroRemuneraciones, MesHonorarios } from './nucleo/remuneraciones';
 import { pesos } from './formato';
+import PanelContabilidad from './PanelContabilidad';
+import { configInicial, type ConfigContable } from './nucleo/contabilidad';
 
 // Todo se guarda solo en este navegador (localStorage). Nada se envía a un servidor.
-const CLAVE_EMPRESA = 'ctp.empresa', CLAVE_DOCS = 'ctp.documentos', CLAVE_F29 = 'ctp.f29', CLAVE_MOVS = 'ctp.movimientos', CLAVE_REGLAS = 'ctp.reglas', CLAVE_LIBROS = 'ctp.libros', CLAVE_HON = 'ctp.honorarios';
+const CLAVE_EMPRESA = 'ctp.empresa', CLAVE_DOCS = 'ctp.documentos', CLAVE_F29 = 'ctp.f29', CLAVE_MOVS = 'ctp.movimientos', CLAVE_REGLAS = 'ctp.reglas', CLAVE_LIBROS = 'ctp.libros', CLAVE_HON = 'ctp.honorarios', CLAVE_CONTA = 'ctp.contabilidad';
 const leerLS = <T,>(k: string, def: T): T => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) as T : def; } catch { return def; } };
 const guardarLS = (k: string, v: unknown) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* sin almacenamiento */ } };
 
@@ -37,6 +39,7 @@ export default function App() {
   const [reglas, setReglas] = useState<Regla[]>(() => leerLS<Regla[]>(CLAVE_REGLAS, []));
   const [libros, setLibros] = useState<LibroRemuneraciones[]>(() => leerLS<LibroRemuneraciones[]>(CLAVE_LIBROS, []));
   const [honorarios, setHonorarios] = useState<MesHonorarios[]>(() => leerLS<MesHonorarios[]>(CLAVE_HON, []));
+  const [conta, setConta] = useState<ConfigContable>(() => ({ ...configInicial(), ...leerLS<Partial<ConfigContable>>(CLAVE_CONTA, {}) }));
   const movsRef = useRef(new Set<string>());
   const [fichas, setFichas] = useState<Ficha[]>([]);
   const [arrastrando, setArrastrando] = useState(false);
@@ -51,6 +54,7 @@ export default function App() {
   useEffect(() => guardarLS(CLAVE_REGLAS, reglas), [reglas]);
   useEffect(() => guardarLS(CLAVE_LIBROS, libros), [libros]);
   useEffect(() => guardarLS(CLAVE_HON, honorarios), [honorarios]);
+  useEffect(() => guardarLS(CLAVE_CONTA, conta), [conta]);
 
   async function leer(lista: FileList | File[]) {
     if (!empresa) return;
@@ -92,7 +96,7 @@ export default function App() {
 
   function cambiarEmpresa() {
     if (!confirm('Cambiar de empresa borra los documentos cargados en este navegador. ¿Continuar?')) return;
-    setEmpresa(null); setDocs([]); setF29s([]); setMovs([]); setReglas([]); setLibros([]); setHonorarios([]); setFichas([]);
+    setEmpresa(null); setDocs([]); setF29s([]); setMovs([]); setReglas([]); setLibros([]); setHonorarios([]); setConta(configInicial()); setFichas([]);
     try { localStorage.removeItem(CLAVE_EMPRESA); } catch { /* sin almacenamiento */ }
   }
 
@@ -152,6 +156,8 @@ export default function App() {
           onCambio={(m, d, r) => { setMovs(m); if (d) setDocs(d); if (r) setReglas(r); }}
           onBorrar={() => { if (confirm('¿Borrar los movimientos del banco y las reglas? Las facturas marcadas como pagadas o cobradas vuelven a quedar pendientes.')) {
             setMovs([]); setReglas([]); setDocs(ds => ds.map(d => (d.fechaPago ? { ...d, estado: d.libro === 'VENTA' ? 'POR COBRAR' : 'POR PAGAR', fechaPago: undefined } : d))); } }} />}
+        {(docs.length > 0 || movs.length > 0) && <PanelContabilidad empresa={empresa.rut} docs={docs} f29s={f29s} movs={movs} libros={libros} honorarios={honorarios}
+          cfg={conta} onCfg={setConta} />}
       </main>
 
       {verResumen && <ResumenAnio docs={docs} f29s={f29s} movs={movs} libros={libros} honorarios={honorarios} empresa={empresa} onCerrar={() => setVerResumen(false)} />}

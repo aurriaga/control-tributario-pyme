@@ -191,3 +191,34 @@ tr.total td { font-weight: 700; background: var(--papel); }
 .clasificar { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 8px; font-size: 14px; }
 .clasificar select { padding: 6px 10px; border-radius: 10px; border: 2px solid var(--linea); background: var(--hoja); }
 .banco table td:nth-child(2) { white-space: nowrap; }
+
+/* Contabilidad */
+.conta { margin-top: 28px; }
+.conta .borrador-cab h2 { margin: 0; }
+.pestanas { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 18px; }
+.pestanas button { border: 2px solid var(--linea); background: var(--papel); border-radius: 999px; padding: 6px 14px; font-size: 15px; cursor: pointer; }
+.pestanas button.activa { background: var(--anil); border-color: var(--anil); color: #fff; font-weight: 700; }
+.rango { margin: 0 0 14px; }
+.ajustes select, .editable input, .editable select, .conta td select { padding: 6px 10px; border-radius: 10px; border: 2px solid var(--linea); background: var(--papel); }
+.ajustes .buscar { margin: 0; align-self: end; }
+.en-linea { display: flex; gap: 8px; align-items: center; font-size: 15px; color: var(--tenue); }
+.en-linea input { padding: 6px 10px; border-radius: 10px; border: 2px solid var(--linea); background: var(--papel); }
+.controles { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.controles li { padding: 12px 14px; border-radius: 12px; background: var(--papel); border-left: 5px solid var(--linea); }
+.controles li.verde { border-left-color: var(--verde); } .controles li.rojo { border-left-color: var(--rojo); } .controles li.ambar { border-left-color: var(--ambar); }
+.eerr { max-width: 720px; }
+.eerr tr.sub td { color: var(--tenue); font-size: 14px; padding-top: 3px; padding-bottom: 3px; border-bottom: 0; }
+.eerr tr.sub td:first-child { padding-left: 28px; }
+.eerr tr.subtotal td { font-weight: 700; border-top: 2px solid var(--grafito); }
+.eerr tr.total td { font: 800 20px var(--titulo); border-top: 3px double var(--grafito); }
+.balance th.grupo { text-align: center; border-bottom: 1px solid var(--linea); }
+.balance td, .diario td { font-size: 14px; padding: 6px 8px; }
+tr.transitoria td { color: var(--rojo); }
+.diario tr.nuevo td { border-top: 2px solid var(--linea); }
+.diario td.haber { padding-left: 32px; }
+.diario td.glosa { min-width: 280px; color: var(--tenue); }
+.editable td { padding: 4px 6px; }
+.editable input { width: 100%; min-width: 140px; }
+.editable input.monto { min-width: 110px; text-align: right; }
+input.corto { min-width: 90px; width: 110px; }
+.editable .enlace.peligro { margin: 0; }
