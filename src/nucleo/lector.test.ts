@@ -22,7 +22,7 @@ describe('lector de documentos', () => {
     const c = await ctx();
     const esperado: Record<string, string> = {
       PRUEBA_RCV_COMPRA: 'RCV_COMPRA', PRUEBA_RCV_VENTA: 'RCV_VENTA', PRUEBA_cartola: 'CARTOLA',
-      PRUEBA_LibroRemuneraciones: 'REMUNERACIONES', PRUEBA_LibroDiario: 'LIBRO_DIARIO', PRUEBA_informeAnualREC: 'HONORARIOS',
+      PRUEBA_LibroRemuneraciones: 'REMUNERACIONES', PRUEBA_LibroDiario: 'LIBRO_DIARIO', PRUEBA_informeAnualREC: 'HONORARIOS', PRUEBA_F29: 'F29',
     };
     for (const f of readdirSync(DATOS)) {
       const r = await leerArchivo(f, leer(f), c);

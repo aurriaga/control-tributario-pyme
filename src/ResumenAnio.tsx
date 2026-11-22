@@ -2,15 +2,23 @@ import { useMemo, useState } from 'react';
 import * as XLSX from 'xlsx';
 import type { Documento, Empresa } from './nucleo/rcv';
 import { aniosDisponibles, resumenAnual } from './nucleo/resumen';
+import { resumenF29, type F29 } from './nucleo/f29';
+import { periodoLegible } from './nucleo/lector';
 import { pesos } from './formato';
 
 const MES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 const millones = (n: number) => (n < 0 ? '−' : '') + '$' + (Math.abs(n) / 1e6).toLocaleString('es-CL', { maximumFractionDigits: 1, minimumFractionDigits: 1 }) + ' M';
 
-export default function ResumenAnio({ docs, empresa, onCerrar }: { docs: Documento[]; empresa: Empresa; onCerrar: () => void }) {
-  const anios = useMemo(() => aniosDisponibles(docs), [docs]);
+export default function ResumenAnio({ docs, f29s, empresa, onCerrar }: { docs: Documento[]; f29s: F29[]; empresa: Empresa; onCerrar: () => void }) {
+  const anios = useMemo(() => [...new Set([...aniosDisponibles(docs), ...f29s.map(f => Number(f.periodo.slice(0, 4)))])].sort((a, b) => b - a), [docs, f29s]);
   const [anio, setAnio] = useState(anios[0] ?? new Date().getFullYear());
   const r = useMemo(() => resumenAnual(docs, anio), [docs, anio]);
+  const rf = useMemo(() => resumenF29(docs, f29s, anio), [docs, f29s, anio]);
+  const alertas = useMemo(() => [
+    ...rf.conDiferencias.map(p => ({ nivel: 'falta' as const, texto: `El F29 de ${periodoLegible(p)} no cuadra con el RCV: revisa la sección IVA y F29.` })),
+    ...(rf.sinF29.length ? [{ nivel: 'revisar' as const, texto: `Sin F29 cargado: ${rf.sinF29.map(periodoLegible).join(', ')}.` }] : []),
+    ...r.alertas,
+  ], [r, rf]);
   const tope = Math.max(1, ...r.meses.map(m => Math.max(m.ventas, m.compras)));
 
   function descargarExcel() {
@@ -51,6 +59,10 @@ export default function ResumenAnio({ docs, empresa, onCerrar }: { docs: Documen
           <div><span>Compras netas</span><b>{pesos(r.compras)}</b></div>
           <div><span>IVA débito menos crédito</span><b className={r.ivaNeto < 0 ? 'neg' : ''}>{pesos(r.ivaNeto)}</b><small>{r.ivaNeto >= 0 ? 'a pagar antes de remanentes y PPM' : 'queda como remanente'}</small></div>
           <div><span>Documentos</span><b>{r.documentos.toLocaleString('de-DE')}</b></div>
+          {rf.cargados > 0 && <>
+            <div><span>Pagado en F29</span><b>{pesos(rf.totalPagado)}</b><small>{rf.cargados} F29: IVA {pesos(rf.ivaPagado)} y PPM {pesos(rf.ppm)}</small></div>
+            <div><span>F29 que cuadran con el RCV</span><b className={rf.conDiferencias.length ? 'neg' : ''}>{rf.cuadran} de {rf.cargados}</b></div>
+          </>}
         </div>
 
         <section className="grafico" aria-label="Ventas y compras por mes">
@@ -75,8 +87,8 @@ export default function ResumenAnio({ docs, empresa, onCerrar }: { docs: Documen
 
         <section className="alertas">
           <h3>Para revisar</h3>
-          {r.alertas.length === 0 ? <p>No hay alertas con lo cargado hasta ahora.</p>
-            : <ul>{r.alertas.map((a, i) => <li key={i} className={a.nivel}>{a.texto}</li>)}</ul>}
+          {alertas.length === 0 ? <p>No hay alertas con lo cargado hasta ahora.</p>
+            : <ul>{alertas.map((a, i) => <li key={i} className={a.nivel}>{a.texto}</li>)}</ul>}
         </section>
       </article>
     </div>

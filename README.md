@@ -12,6 +12,8 @@ de Excel con macros.
   reconoce qué es por su contenido: RCV de compras o ventas, cartolas (y su banco), F29, F22, carpeta tributaria,
   libros de remuneraciones, boletas de honorarios y Libro Diario. No carga documentos de otra empresa.
 - Carga el Registro de Compras y Ventas del SII (CSV o Excel): omite duplicados y avisa si falta el período.
+- Lee el **F29** en PDF, lo cuadra al peso contra el RCV (débito, crédito y base del PPM) y arma el **borrador del F29**
+  del mes con el remanente anterior reajustado por UTM y el PPM.
 - **Resumen del año**: ventas, compras, IVA, mes a mes, principales clientes y proveedores y alertas; se descarga
   en PDF o Excel.
 

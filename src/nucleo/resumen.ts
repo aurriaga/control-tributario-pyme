@@ -49,11 +49,14 @@ export function resumenAnual(docs: Documento[], anio: number): ResumenAnual {
   const alertas: Alerta[] = [];
   const conDatos = meses.filter(m => m.docsVenta + m.docsCompra > 0);
   const ultimo = conDatos.length ? Number(conDatos[conDatos.length - 1].periodo.slice(5)) : 0;
-  const huecos = meses.slice(0, ultimo).filter(m => m.docsCompra === 0).map(m => m.periodo);
-  if (huecos.length) alertas.push({ nivel: 'falta', texto: `Falta el RCV de compras de ${huecos.length === 1 ? 'un mes' : huecos.length + ' meses'} (${huecos.join(', ')}).` });
+  // Los huecos se buscan entre el primer y el último mes con datos (si la empresa empezó a cargar en julio, enero no "falta")
+  const primero = conDatos.length ? Number(conDatos[0].periodo.slice(5)) - 1 : 0;
+  const nombreMes = (p: string) => ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'][Number(p.slice(5)) - 1];
+  const huecos = meses.slice(primero, ultimo).filter(m => m.docsCompra === 0).map(m => nombreMes(m.periodo));
+  if (huecos.length) alertas.push({ nivel: 'falta', texto: `Falta el RCV de compras de ${huecos.join(', ')}.` });
   const top3 = clientes.slice(0, 3).reduce((a, c) => a + c.participacion, 0);
   if (clientes.length >= 3 && top3 >= 0.7) alertas.push({ nivel: 'revisar', texto: `Tres clientes concentran el ${Math.round(top3 * 100)}% de las ventas del año.` });
-  const sinVentas = meses.slice(0, ultimo).filter(m => m.docsVenta === 0).map(m => m.periodo);
+  const sinVentas = meses.slice(primero, ultimo).filter(m => m.docsVenta === 0).map(m => nombreMes(m.periodo));
   if (sinVentas.length) alertas.push({ nivel: 'revisar', texto: `Meses sin ventas registradas: ${sinVentas.join(', ')}.` });
   if (compras > ventas && ventas > 0) alertas.push({ nivel: 'revisar', texto: 'Las compras del año superan a las ventas.' });
 

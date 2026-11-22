@@ -18,7 +18,7 @@ que se abre desde GitHub Pages y procesa los archivos **en el navegador**: nada 
 | Etapa | Módulos VBA de origen | Qué entrega la app | Estado |
 |---|---|---|---|
 | 1. Base y RCV | modRUT, modUtil, modImportRCV | Registro de empresa, carga de RCV de compras y ventas (CSV, UTF-16, con título), duplicados, resumen por período | **Hecha** |
-| 2. Lector de documentos, diseño y F29 | modDocumentos, modFacturas, modNormativa | Botón **Lector de documentos** (hecho: reconoce todos los tipos y formatos y lee el RCV en CSV o Excel). Nuevo diseño (hecho). Falta: lectura de F29 en PDF, cuadratura IVA del RCV vs. F29, PPM y borrador del F29, clasificación de compras por categoría | En curso |
+| 2. Lector de documentos, diseño y F29 | modDocumentos, modFacturas, modNormativa | Botón **Lector de documentos** (reconoce todos los tipos y formatos; lee RCV en CSV o Excel y F29 en PDF), nuevo diseño, cuadratura IVA del RCV vs. F29 al peso, borrador del F29 con remanente reajustado por UTM y PPM. Queda para más adelante: clasificar compras por categoría y anular documentos que no existen en el SII | **Hecha** |
 | 3. Banco | modCruce, modConciliacion | Lectura de cartolas (CSV, Excel, PDF), cruce banco–facturas con reglas por RUT, conciliación y partidas por identificar | Pendiente |
 | 4. Remuneraciones y honorarios | modRemuneraciones | Libros de remuneraciones, boletas de honorarios, aporte del empleador, apertura | Pendiente |
 | 5. Contabilidad | modContabilidad, modEstructura | Libro Diario automático, Mayor, Balance de 8 columnas, Estado de resultados, asientos manuales | Pendiente |

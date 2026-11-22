@@ -158,3 +158,20 @@ td { padding: 8px 10px; border-bottom: 1px solid var(--linea); vertical-align: t
   .resumen-hoja { box-shadow: none; width: 100%; padding: 0; }
   .no-imprimir { display: none !important; }
 }
+
+/* IVA y F29 */
+.iva { margin-top: 28px; }
+.bajada.chica { font-size: 17px; margin: 4px 0 16px; }
+.chip { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 13px; font-weight: 700; border: 2px solid currentColor; }
+.chip.verde { color: var(--verde); } .chip.rojo { color: var(--rojo); } .chip.ambar { color: var(--ambar); }
+.detalle-fila { display: block; color: var(--tenue); font-size: 13px; margin-top: 4px; }
+.borrador { margin-top: 30px; border-top: 2px solid var(--linea); padding-top: 22px; }
+.borrador-cab { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-bottom: 12px; }
+.borrador-cab h3 { font-size: 22px; }
+.borrador-cab select, .ajustes input { padding: 8px 12px; border-radius: 10px; border: 2px solid var(--linea); background: var(--papel); }
+.vence { margin-left: auto; font-weight: 700; color: var(--anil); }
+tr.total td { font-weight: 700; background: var(--papel); }
+.aviso { color: var(--ambar); margin: 10px 0 0; font-size: 15px; }
+.ajustes { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 16px; }
+.ajustes label { display: grid; gap: 4px; font-size: 14px; color: var(--tenue); }
+.nota-borrador { color: var(--tenue); font-size: 14px; margin-top: 14px; max-width: 75ch; }

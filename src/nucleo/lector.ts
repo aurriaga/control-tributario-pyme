@@ -2,6 +2,7 @@
 import { extraer, type Servicios, type Formato } from './extraer';
 import { clasificar, NOMBRE_TIPO, type Clasificacion, type TipoDoc } from './clasificar';
 import { importarRCV, type Documento, type Empresa } from './rcv';
+import { leerF29, controlF29, type F29 } from './f29';
 
 export type Estado = 'leido' | 'reconocido' | 'otra_empresa' | 'no_reconocido' | 'error';
 
@@ -14,13 +15,14 @@ export interface ResultadoLectura {
   mensaje: string;          // qué se hizo, en lenguaje simple
   avisos: string[];
   documentos: Documento[];  // documentos del RCV leídos
+  f29?: F29;                // formulario 29 leído
 }
 
 // En qué etapa del plan se agrega la lectura completa de cada tipo (mientras tanto se reconoce y se informa)
 const ETAPA: Partial<Record<TipoDoc, string>> = {
-  F29: 'la etapa de F29', F22: 'la etapa de F29', CARPETA_TRIBUTARIA: 'la etapa de F29', CARTOLA: 'la etapa de banco',
+  F22: 'la etapa de contabilidad', CARPETA_TRIBUTARIA: 'la etapa de contabilidad', CARTOLA: 'la etapa de banco',
   REMUNERACIONES: 'la etapa de remuneraciones', HONORARIOS: 'la etapa de remuneraciones', LIBRO_DIARIO: 'la etapa de contabilidad',
-  FACTURA: 'la etapa de F29', BOLETA: 'la etapa de F29',
+  FACTURA: 'una próxima etapa', BOLETA: 'una próxima etapa',
 };
 
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
@@ -66,6 +68,16 @@ export async function leerArchivo(nombre: string, bytes: Uint8Array, ctx: Contex
     res.mensaje = (n === 0 ? 'Ningún documento nuevo' : n === 1 ? '1 documento cargado' : `${n} documentos cargados`)
       + (r.duplicados ? `, ${r.duplicados === 1 ? '1 repetido omitido' : r.duplicados + ' repetidos omitidos'}` : '')
       + (r.lineasInvalidas ? `, ${r.lineasInvalidas} líneas sin tipo, folio o fecha` : '') + '.';
+    return res;
+  }
+  if (cl.tipo === 'F29') {
+    const f = leerF29(contenido.texto, nombre);
+    if (!f) { res.mensaje = 'Es un F29, pero no se encontró el período (casillero 15). Descárgalo de nuevo desde el SII como formulario compacto.'; return res; }
+    const $ = (n?: number) => '$' + Math.round(n ?? 0).toLocaleString('de-DE');
+    res.estado = 'leido';
+    res.f29 = f;
+    res.mensaje = `F29 ${f.tipo ? f.tipo.toLowerCase() + ' ' : ''}presentado el ${f.fechaPresentacion || '(sin fecha)'}: IVA a pagar ${$(f.codigos['089'])}, PPM ${$(f.codigos['062'])} y total pagado ${$(f.codigos['91'])}.`;
+    res.avisos.push(...controlF29(f));
     return res;
   }
   res.mensaje = `${cl.motivo} Ya está reconocido; su lectura completa se agrega en ${ETAPA[cl.tipo] ?? 'una próxima etapa'}.`;
