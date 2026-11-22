@@ -27,6 +27,24 @@ que se abre desde GitHub Pages y procesa los archivos **en el navegador**: nada 
 | 8. Robot contable | — (nuevo) | `robot/robot.ts` en la línea de comandos: lee la carpeta de una empresa, aplica su **memoria contable** (reglas por glosa o RUT, clasificaciones, cruces, categorías, anulados, apertura y asientos manuales), acepta solos los cruces de confianza alta, arma la contabilidad y los 17 controles, y deja **dudas** agrupadas para preguntar, un informe y un respaldo que la app abre. Cada respuesta se guarda con `aprender` y no se vuelve a preguntar. Lo usa el agente Riffo-Contador. La memoria vive en una carpeta local del usuario, nunca en el repositorio | **Hecha** |
 | 9. Clasificación y menú | — (nuevo) | Menú lateral con una sección a la vez; vista **Por clasificar** con sugerencias (categoría del proveedor por palabras clave o parecido con proveedores ya clasificados; movimientos del banco por RUT ya visto, glosa igual o palabras clave) y aceptar todas; reglas por glosa igual, contiene o RUT, con alcance antes de guardar y lista para editar, desactivar o borrar. Medido en local con las decisiones reales del Excel: proveedores 70 aciertos y 2 diferencias de criterio de 72 sugeridos; banco 485 de 487 | **Hecha** |
 
+## Próximos pasos (acordados el 22-11-2026)
+
+1. **Multiempresa**: guardar varias empresas en el mismo navegador y cambiar entre ellas sin perder datos.
+   - Datos separados por RUT (`ctp.<rut>.documentos`, etc.) y lista de empresas registradas; migrar los datos actuales sin pérdida.
+   - Selector de empresa arriba del menú lateral; "Agregar empresa" (3 o 4 o más), cada una con su plan, reglas, memoria y respaldo.
+   - El lector reconoce el RUT de cada archivo: si es de otra empresa registrada, ofrece cargarlo en esa en vez de rechazarlo.
+   - Pasar el almacenamiento a IndexedDB (varias empresas superan los ~5 MB de localStorage) y respaldo por empresa o de todas.
+2. **Asistente (chatbot) dentro de la app**: guía, responde "¿cómo hago…?" y revisa errores.
+   - Primera versión sin servicios externos (la app es pública y no debe exponer datos): responde con la ayuda de la propia app
+     (recorrido, textos de cada sección) y con los 17 controles, el lector y las reglas.
+   - Detecta errores y propone el arreglo con un botón (por ejemplo: RUT de la empresa que no coincide con los RCV, UTM faltante,
+     F29 sin cargar, apertura incompleta, movimientos sin clasificar). Nunca corrige sin confirmación.
+   - Opcional después: conectar un modelo de lenguaje solo si el usuario pone su propia clave y acepta qué se envía
+     (nunca RUT, montos ni nombres sin su permiso).
+3. **Pendientes de datos de Piedrabella** (del usuario, fuera del repositorio): responder las preguntas de Riffo-Contador
+   (82 movimientos y 3 proveedores), F29 de octubre, UTM de noviembre en la app, préstamo bancario y diferencias de la apertura,
+   y revisar el RUT de la empresa registrada en el sitio publicado.
+
 ## Lector de documentos
 
 Un único botón donde se arrastran uno o muchos archivos. La app reconoce **qué documento es por su contenido** (no solo
