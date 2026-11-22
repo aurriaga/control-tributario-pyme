@@ -6,10 +6,14 @@ import '@fontsource/bricolage-grotesque/800.css'
 import '@fontsource/atkinson-hyperlegible/400.css'
 import '@fontsource/atkinson-hyperlegible/700.css'
 import './index.css'
-import App from './App.tsx'
+import { iniciarAlmacen } from './almacen'
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-)
+// Primero se abre el almacén (IndexedDB) y se pasan los datos antiguos; después se dibuja la app
+iniciarAlmacen().finally(async () => {
+  const { default: App } = await import('./App.tsx')
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <App />
+    </StrictMode>,
+  )
+})

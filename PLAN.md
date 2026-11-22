@@ -29,7 +29,7 @@ que se abre desde GitHub Pages y procesa los archivos **en el navegador**: nada 
 
 ## Próximos pasos (acordados el 22-11-2026)
 
-1. **Multiempresa** (primera parte hecha el 22-11: datos por RUT con migración automática, selector, agregar y quitar empresa, respaldo por empresa; falta: que el lector ofrezca cargar un archivo en la empresa de su RUT, e IndexedDB): guardar varias empresas en el mismo navegador y cambiar entre ellas sin perder datos.
+1. **Multiempresa** (hecha el 22-11: datos por RUT con migración automática, selector, agregar y quitar empresa, respaldo por empresa, el lector carga cada archivo en la empresa registrada de su RUT, y almacenamiento en IndexedDB con copia en memoria): guardar varias empresas en el mismo navegador y cambiar entre ellas sin perder datos.
    - Datos separados por RUT (`ctp.<rut>.documentos`, etc.) y lista de empresas registradas; migrar los datos actuales sin pérdida.
    - Selector de empresa arriba del menú lateral; "Agregar empresa" (3 o 4 o más), cada una con su plan, reglas, memoria y respaldo.
    - El lector reconoce el RUT de cada archivo: si es de otra empresa registrada, ofrece cargarlo en esa en vez de rechazarlo.
@@ -66,7 +66,7 @@ colores con significado (cuadra, revisar, falta), avance visible del mes y texto
 
 - **Vite + React + TypeScript**, pruebas con **Vitest**. El cálculo vive en `src/nucleo/` como funciones puras sin
   dependencia de la pantalla, para probarlo igual que las macros.
-- **Datos en el navegador**: `localStorage` (con los datos reales de un año ocupa cerca de 1 MB de los ~5 MB disponibles).
-  Si el navegador no puede guardar, la app lo avisa. El **respaldo** (.json) lleva el trabajo a otro computador; si los
-  datos crecen, el siguiente paso es IndexedDB.
+- **Datos en el navegador**: IndexedDB (con copia en memoria para leer al instante; si el navegador no lo tiene, localStorage).
+  Cada empresa guarda sus datos aparte. Si el navegador no puede guardar, la app lo avisa. El **respaldo** (.json) lleva
+  el trabajo de cada empresa a otro computador.
 - **Publicación**: GitHub Actions compila y publica en GitHub Pages en cada cambio de la rama `main`.

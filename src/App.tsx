@@ -21,20 +21,20 @@ import { panelMes, mesesConDatos, crearRespaldo, leerRespaldo } from './nucleo/p
 import { controlesGenerales, observacionesDocumento } from './nucleo/controles';
 import { descargarTodo } from './exportar';
 import { iniciarRecorrido } from './recorrido';
-import { migrar, empresaActiva, empresas as listaEmpresas, claveDe, agregarEmpresa, activar, quitarEmpresa, datosDeEmpresa, importarRespaldo } from './almacen';
+import { ls, migrar, empresaActiva, empresas as listaEmpresas, claveDe, agregarEmpresa, activar, quitarEmpresa, datosDeEmpresa, importarRespaldo, clavesDocs, agregarLectura } from './almacen';
 import PorClasificar from './PorClasificar';
 import { contarPorClasificar } from './nucleo/porClasificar';
 import Icono, { type NombreIcono } from './Icono';
 
-// Todo se guarda solo en este navegador (localStorage). Nada se envía a un servidor.
+// Todo se guarda solo en este navegador (IndexedDB, o ls() si no hay). Nada se envía a un servidor.
 // Multiempresa: cada empresa guarda sus datos aparte ("ctp.<RUT>.documentos"); se cambia de empresa recargando la página.
-try { migrar(localStorage); } catch { /* sin almacenamiento */ }
-const ACTIVA = (() => { try { return empresaActiva(localStorage); } catch { return null; } })();
+try { migrar(ls()); } catch { /* sin almacenamiento */ }
+const ACTIVA = (() => { try { return empresaActiva(ls()); } catch { return null; } })();
 const K = (dato: string) => claveDe(ACTIVA?.rut ?? '', dato);
 const CLAVE_DOCS = K('documentos'), CLAVE_F29 = K('f29'), CLAVE_MOVS = K('movimientos'), CLAVE_REGLAS = K('reglas'), CLAVE_LIBROS = K('libros'), CLAVE_HON = K('honorarios'), CLAVE_CONTA = K('contabilidad'), CLAVE_UTM = K('utm');
-const leerLS = <T,>(k: string, def: T): T => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) as T : def; } catch { return def; } };
+const leerLS = <T,>(k: string, def: T): T => { try { const v = ls().getItem(k); return v ? JSON.parse(v) as T : def; } catch { return def; } };
 // Devuelve false si el navegador no pudo guardar (sin espacio o almacenamiento bloqueado): la app lo avisa.
-const guardarLS = (k: string, v: unknown) => { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch { return false; } };
+const guardarLS = (k: string, v: unknown) => { try { ls().setItem(k, JSON.stringify(v)); return true; } catch { return false; } };
 
 const SELLO: Record<ResultadoLectura['estado'], { texto: string; clase: string }> = {
   leido: { texto: 'Cargado', clase: 'verde' },
@@ -49,12 +49,12 @@ const MENU: [Vista, string][] = [['inicio', 'Inicio'], ['cargar', 'Cargar docume
   ['iva', 'IVA y F29'], ['personal', 'Personal'], ['banco', 'Banco'], ['contabilidad', 'Contabilidad']];
 const vistaDeHash = (): Vista => { const h = location.hash.slice(1) as Vista; return MENU.some(([v]) => v === h) ? h : 'inicio'; };
 
-interface Ficha { id: number; archivo: string; leyendo: boolean; resultado?: ResultadoLectura }
+interface Ficha { id: number; archivo: string; leyendo: boolean; resultado?: ResultadoLectura; file?: File; cargadoEn?: string }
 
 export default function App() {
   const [empresa] = useState<Empresa | null>(ACTIVA);
   const [agregando, setAgregando] = useState(false);
-  const lista = useMemo(() => { try { return listaEmpresas(localStorage); } catch { return []; } }, []);
+  const lista = useMemo(() => { try { return listaEmpresas(ls()); } catch { return []; } }, []);
   const [docs, setDocs] = useState<Documento[]>(() => leerLS<Documento[]>(CLAVE_DOCS, []));
   const [f29s, setF29s] = useState<F29[]>(() => leerLS<F29[]>(CLAVE_F29, []));
   const [movs, setMovs] = useState<Movimiento[]>(() => leerLS<Movimiento[]>(CLAVE_MOVS, []));
@@ -71,6 +71,7 @@ export default function App() {
   const [verResumen, setVerResumen] = useState(false);
   const [vista, setVista] = useState<Vista>(vistaDeHash);
   const ir = useCallback((v: Vista) => { setVista(v); if (location.hash.slice(1) !== v) history.pushState(null, '', `#${v}`); scrollTo({ top: 0 }); }, []);
+  useEffect(() => { const f = () => setSinGuardar(true); addEventListener('ctp:sin-guardar', f); return () => removeEventListener('ctp:sin-guardar', f); }, []);
   useEffect(() => {
     const alCambiar = () => setVista(vistaDeHash());
     const pedido = (e: Event) => ir((e as CustomEvent<Vista>).detail);    // el recorrido guiado cambia de vista
@@ -97,7 +98,7 @@ export default function App() {
   async function leer(lista: FileList | File[]) {
     if (!empresa) return;
     const archivos = Array.from(lista);
-    const nuevas = archivos.map(f => ({ id: ++idRef.current, archivo: f.name, leyendo: true }));
+    const nuevas = archivos.map(f => ({ id: ++idRef.current, archivo: f.name, leyendo: true, file: f }));
     setFichas(fs => [...nuevas, ...fs]);
     for (let i = 0; i < archivos.length; i++) {
       const f = archivos[i];
@@ -132,23 +133,23 @@ export default function App() {
   }, [docs]);
 
   const nuevaEmpresa = (e: Empresa) => {
-    if (lista.some(x => x.rut === e.rut)) { activar(localStorage, e.rut); location.reload(); return; }
-    try { agregarEmpresa(localStorage, e); } catch { alert('El navegador no pudo guardar la empresa.'); return; }
+    if (lista.some(x => x.rut === e.rut)) { activar(ls(), e.rut); location.reload(); return; }
+    try { agregarEmpresa(ls(), e); } catch { alert('El navegador no pudo guardar la empresa.'); return; }
     location.hash = 'cargar'; location.reload();
   };
   if (!empresa || agregando) return <Bienvenida otras={lista} onGuardar={nuevaEmpresa} onCancelar={empresa ? () => setAgregando(false) : undefined} />;
 
   function cambiarA(rut: string) {
     if (rut === '__nueva') { setAgregando(true); return; }
-    activar(localStorage, rut); location.reload();
+    activar(ls(), rut); location.reload();
   }
   function quitarEsta() {
     if (!confirm(`¿Quitar ${empresa!.razonSocial} de este navegador? Se borran sus documentos, banco, reglas y contabilidad guardados aquí. Si no tienes un respaldo, descárgalo antes.`)) return;
-    quitarEmpresa(localStorage, empresa!.rut); location.hash = ''; location.reload();
+    quitarEmpresa(ls(), empresa!.rut); location.hash = ''; location.reload();
   }
 
   function guardarRespaldo() {
-    const datos = datosDeEmpresa(localStorage, empresa!);
+    const datos = datosDeEmpresa(ls(), empresa!);
     const blob = new Blob([JSON.stringify(crearRespaldo(datos))], { type: 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
     a.download = `Respaldo_ControlTributario_${empresa!.rut.replace(/\./g, '')}_${new Date().toISOString().slice(0, 10)}.json`; a.click();
@@ -160,9 +161,19 @@ export default function App() {
     const existe = lista.some(x => x.rut === r.respaldo.empresa.rut);
     const que = existe ? `Reemplaza los datos de ${r.respaldo.empresa.razonSocial} guardados en este navegador (las otras empresas no se tocan).` : `Se agrega ${r.respaldo.empresa.razonSocial} como otra empresa (las que ya tienes no se tocan).`;
     if (!confirm(`Abrir el respaldo de ${r.resumen}\n\n${que} ¿Continuar?`)) return;
-    try { importarRespaldo(localStorage, r.respaldo); }
+    try { importarRespaldo(ls(), r.respaldo); }
     catch { alert('El navegador no pudo guardar el respaldo (¿sin espacio?).'); return; }
     location.reload();
+  }
+
+  // Un archivo de otra empresa registrada se carga en esa empresa (sin cambiar la activa)
+  async function cargarEn(f: Ficha, destino: Empresa) {
+    if (!f.file) return;
+    setFichas(fs => fs.map(x => (x.id === f.id ? { ...x, leyendo: true } : x)));
+    const r = await leerArchivo(f.file.name, new Uint8Array(await f.file.arrayBuffer()), { empresas: [destino], clavesExistentes: clavesDocs(ls(), destino.rut), servicios: serviciosNavegador });
+    let n = 0;
+    try { if (r.estado === 'leido') n = agregarLectura(ls(), destino.rut, r); } catch { r.avisos.push('El navegador no pudo guardar (¿sin espacio?).'); }
+    setFichas(fs => fs.map(x => (x.id === f.id ? { ...x, leyendo: false, resultado: r, cargadoEn: r.estado === 'leido' ? `${destino.razonSocial} (${n} ${n === 1 ? 'elemento nuevo' : 'elementos nuevos'})` : undefined } : x)));
   }
 
   const hay = !!(docs.length || f29s.length || movs.length || libros.length);
@@ -235,7 +246,7 @@ export default function App() {
           {fichas.length > 0 && (
             <section className="mesa" aria-live="polite">
               <div className="mesa-titulo"><h2>Lo que entendí</h2><button className="enlace" onClick={() => setFichas([])}>Limpiar la mesa</button></div>
-              <div className="fichas">{fichas.map(f => <FichaDoc key={f.id} f={f} />)}</div>
+              <div className="fichas">{fichas.map(f => <FichaDoc key={f.id} f={f} lista={lista} onCargarEn={cargarEn} />)}</div>
             </section>
           )}
         </>)}
@@ -291,16 +302,20 @@ function SinDatos({ texto, onCargar }: { texto: string; onCargar: () => void }) 
   );
 }
 
-function FichaDoc({ f }: { f: Ficha }) {
+function FichaDoc({ f, lista, onCargarEn }: { f: Ficha; lista: Empresa[]; onCargarEn: (f: Ficha, e: Empresa) => void }) {
   if (f.leyendo || !f.resultado) return (
     <article className="ficha leyendo"><p className="archivo">{f.archivo}</p><h3>Leyendo…</h3><p>Si es una foto o un PDF escaneado puede tardar un poco.</p></article>
   );
-  const r = f.resultado, sello = SELLO[r.estado];
+  const r = f.resultado, sello = f.cargadoEn ? { texto: 'Cargado', clase: 'verde' } : SELLO[r.estado];
+  const otra = r.estado === 'otra_empresa' ? lista.find(e => e.rut === r.clasificacion.rutEmpresa) : undefined;
   return (
     <article className={`ficha ${sello.clase}`}>
       <span className={`sello ${sello.clase}`}>{sello.texto}</span>
       <h3>{r.titulo}</h3>
-      <p>{r.mensaje}</p>
+      {f.cargadoEn ? <p>Cargado en <b>{f.cargadoEn}</b>. {r.mensaje}</p>
+        : otra ? <><p>Es de <b>{otra.razonSocial}</b>, otra empresa que tienes registrada.</p><button className="boton" onClick={() => onCargarEn(f, otra)}>Cargar en {otra.razonSocial}</button></>
+        : r.estado === 'otra_empresa' ? <p>{r.mensaje} Si es tuya, agrégala con "Agregar empresa" y vuelve a cargar el archivo.</p>
+        : <p>{r.mensaje}</p>}
       {r.avisos.slice(0, 3).map((a, i) => <p key={i} className="aviso">{a}</p>)}
       <p className="archivo" title={r.archivo}>{r.archivo}</p>
     </article>
