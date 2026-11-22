@@ -3,22 +3,32 @@ import * as XLSX from 'xlsx';
 import type { Documento, Empresa } from './nucleo/rcv';
 import { aniosDisponibles, resumenAnual } from './nucleo/resumen';
 import { resumenF29, type F29 } from './nucleo/f29';
+import type { Movimiento } from './nucleo/cartola';
 import { periodoLegible } from './nucleo/lector';
 import { pesos } from './formato';
 
 const MES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 const millones = (n: number) => (n < 0 ? '−' : '') + '$' + (Math.abs(n) / 1e6).toLocaleString('es-CL', { maximumFractionDigits: 1, minimumFractionDigits: 1 }) + ' M';
 
-export default function ResumenAnio({ docs, f29s, empresa, onCerrar }: { docs: Documento[]; f29s: F29[]; empresa: Empresa; onCerrar: () => void }) {
+export default function ResumenAnio({ docs, f29s, movs, empresa, onCerrar }: { docs: Documento[]; f29s: F29[]; movs: Movimiento[]; empresa: Empresa; onCerrar: () => void }) {
   const anios = useMemo(() => [...new Set([...aniosDisponibles(docs), ...f29s.map(f => Number(f.periodo.slice(0, 4)))])].sort((a, b) => b - a), [docs, f29s]);
   const [anio, setAnio] = useState(anios[0] ?? new Date().getFullYear());
   const r = useMemo(() => resumenAnual(docs, anio), [docs, anio]);
   const rf = useMemo(() => resumenF29(docs, f29s, anio), [docs, f29s, anio]);
+  const banco = useMemo(() => {
+    const delAnio = movs.filter(m => m.fecha.startsWith(String(anio))).sort((a, b) => a.fecha.localeCompare(b.fecha));
+    const porCobrar = docs.filter(d => d.libro === 'VENTA' && d.estado === 'POR COBRAR' && d.tipoDoc !== 61).reduce((a, d) => a + d.total, 0);
+    const porPagar = docs.filter(d => d.libro === 'COMPRA' && d.estado === 'POR PAGAR' && d.tipoDoc !== 61 && d.tipoDoc !== 40 && d.tipoDoc !== 43).reduce((a, d) => a + d.total, 0);
+    const sinIdentificar = delAnio.filter(m => m.estado === 'pendiente');
+    return { n: delAnio.length, saldo: delAnio.length ? delAnio[delAnio.length - 1].saldo : null, porCobrar, porPagar,
+      sinIdentificar: sinIdentificar.length, montoSinIdentificar: sinIdentificar.reduce((a, m) => a + m.abono + m.cargo, 0), conBanco: movs.length > 0 };
+  }, [movs, docs, anio]);
   const alertas = useMemo(() => [
+    ...(banco.sinIdentificar ? [{ nivel: 'revisar' as const, texto: `${banco.sinIdentificar} movimientos del banco sin identificar (${pesos(banco.montoSinIdentificar)} entre cargos y abonos).` }] : []),
     ...rf.conDiferencias.map(p => ({ nivel: 'falta' as const, texto: `El F29 de ${periodoLegible(p)} no cuadra con el RCV: revisa la sección IVA y F29.` })),
     ...(rf.sinF29.length ? [{ nivel: 'revisar' as const, texto: `Sin F29 cargado: ${rf.sinF29.map(periodoLegible).join(', ')}.` }] : []),
     ...r.alertas,
-  ], [r, rf]);
+  ], [r, rf, banco]);
   const tope = Math.max(1, ...r.meses.map(m => Math.max(m.ventas, m.compras)));
 
   function descargarExcel() {
@@ -62,6 +72,11 @@ export default function ResumenAnio({ docs, f29s, empresa, onCerrar }: { docs: D
           {rf.cargados > 0 && <>
             <div><span>Pagado en F29</span><b>{pesos(rf.totalPagado)}</b><small>{rf.cargados} F29: IVA {pesos(rf.ivaPagado)} y PPM {pesos(rf.ppm)}</small></div>
             <div><span>F29 que cuadran con el RCV</span><b className={rf.conDiferencias.length ? 'neg' : ''}>{rf.cuadran} de {rf.cargados}</b></div>
+          </>}
+          {banco.conBanco && <>
+            <div><span>Saldo en el banco</span><b>{banco.saldo === null ? '—' : pesos(banco.saldo)}</b><small>último movimiento cargado</small></div>
+            <div><span>Por cobrar</span><b>{pesos(banco.porCobrar)}</b><small>facturas de venta sin cobro en el banco</small></div>
+            <div><span>Por pagar</span><b>{pesos(banco.porPagar)}</b><small>facturas de compra sin pago en el banco</small></div>
           </>}
         </div>
 

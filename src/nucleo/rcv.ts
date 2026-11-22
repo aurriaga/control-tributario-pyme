@@ -24,7 +24,8 @@ export interface Documento {
   otrosImpuestos: number;   // total − exento − neto − IVA (− IVA no recuperable)
   total: number;
   plazoDias: number;
-  estado: 'POR COBRAR' | 'POR PAGAR';
+  estado: 'POR COBRAR' | 'POR PAGAR' | 'COBRADA' | 'PAGADA';
+  fechaPago?: string;       // AAAA-MM-DD del movimiento del banco que la cobró o pagó
   origen: string;           // "RCV <nombre del archivo>"
   observacion: string;
   periodoRCV: string;       // AAAA-MM del archivo del SII ('' si no viene en el nombre)

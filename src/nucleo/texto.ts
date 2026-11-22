@@ -45,12 +45,13 @@ export function separarCSV(linea: string, sep: string): string[] {
 }
 
 const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-/** "03", "3", "mar", "marzo", "sept" -> 3 (0 si no se reconoce). */
+const MESES_EN: Record<string, number> = { jan: 1, apr: 4, aug: 8, dec: 12, set: 9 };   // algunos bancos exportan en inglés ("03-Jan-2026")
+/** "03", "3", "mar", "marzo", "sept", "Jan" -> número de mes (0 si no se reconoce). */
 export function mesDesdeTexto(s: string): number {
   const t = s.trim().toLowerCase();
   if (/^\d{1,2}$/.test(t)) return Number(t);
   const i = MESES.indexOf(t.slice(0, 3));
-  return i >= 0 ? i + 1 : 0;
+  return i >= 0 ? i + 1 : MESES_EN[t.slice(0, 3)] ?? 0;
 }
 
 /** Fecha ISO "AAAA-MM-DD" desde textos como 05/07/2026, 2026-07-05, 5-7-26, "02 ene 2026 10:30" (null si no es válida). */

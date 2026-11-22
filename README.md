@@ -14,6 +14,9 @@ de Excel con macros.
 - Carga el Registro de Compras y Ventas del SII (CSV o Excel): omite duplicados y avisa si falta el período.
 - Lee el **F29** en PDF, lo cuadra al peso contra el RCV (débito, crédito y base del PPM) y arma el **borrador del F29**
   del mes con el remanente anterior reajustado por UTM y el PPM.
+- Lee **cartolas** de distintos bancos y formatos, revisa que los saldos cuadren y **cruza cada movimiento con las
+  facturas** que paga o cobra (RUT o nombre en la glosa y monto exacto); lo que no tiene factura se clasifica y la app
+  aprende la regla.
 - **Resumen del año**: ventas, compras, IVA, mes a mes, principales clientes y proveedores y alertas; se descarga
   en PDF o Excel.
 

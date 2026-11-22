@@ -7,10 +7,13 @@ import { serviciosNavegador } from './servicios';
 import ResumenAnio from './ResumenAnio';
 import PanelIVA from './PanelIVA';
 import type { F29 } from './nucleo/f29';
+import type { Movimiento } from './nucleo/cartola';
+import type { Regla } from './nucleo/cruce';
+import PanelBanco from './PanelBanco';
 import { pesos } from './formato';
 
 // Todo se guarda solo en este navegador (localStorage). Nada se envía a un servidor.
-const CLAVE_EMPRESA = 'ctp.empresa', CLAVE_DOCS = 'ctp.documentos', CLAVE_F29 = 'ctp.f29';
+const CLAVE_EMPRESA = 'ctp.empresa', CLAVE_DOCS = 'ctp.documentos', CLAVE_F29 = 'ctp.f29', CLAVE_MOVS = 'ctp.movimientos', CLAVE_REGLAS = 'ctp.reglas';
 const leerLS = <T,>(k: string, def: T): T => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) as T : def; } catch { return def; } };
 const guardarLS = (k: string, v: unknown) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* sin almacenamiento */ } };
 
@@ -28,6 +31,9 @@ export default function App() {
   const [empresa, setEmpresa] = useState<Empresa | null>(() => leerLS<Empresa | null>(CLAVE_EMPRESA, null));
   const [docs, setDocs] = useState<Documento[]>(() => leerLS<Documento[]>(CLAVE_DOCS, []));
   const [f29s, setF29s] = useState<F29[]>(() => leerLS<F29[]>(CLAVE_F29, []));
+  const [movs, setMovs] = useState<Movimiento[]>(() => leerLS<Movimiento[]>(CLAVE_MOVS, []));
+  const [reglas, setReglas] = useState<Regla[]>(() => leerLS<Regla[]>(CLAVE_REGLAS, []));
+  const movsRef = useRef(new Set<string>());
   const [fichas, setFichas] = useState<Ficha[]>([]);
   const [arrastrando, setArrastrando] = useState(false);
   const [verResumen, setVerResumen] = useState(false);
@@ -37,6 +43,8 @@ export default function App() {
 
   useEffect(() => { guardarLS(CLAVE_DOCS, docs); clavesRef.current = new Set(docs.map(d => d.clave)); }, [docs]);
   useEffect(() => guardarLS(CLAVE_F29, f29s), [f29s]);
+  useEffect(() => { guardarLS(CLAVE_MOVS, movs); movsRef.current = new Set(movs.map(m => m.clave)); }, [movs]);
+  useEffect(() => guardarLS(CLAVE_REGLAS, reglas), [reglas]);
 
   async function leer(lista: FileList | File[]) {
     if (!empresa) return;
@@ -47,6 +55,13 @@ export default function App() {
       const f = archivos[i];
       const r = await leerArchivo(f.name, new Uint8Array(await f.arrayBuffer()), { empresas: [empresa], clavesExistentes: clavesRef.current, servicios: serviciosNavegador });
       if (r.documentos.length) setDocs(d => [...d, ...r.documentos]);
+      if (r.movimientos?.length) {
+        const nuevos = r.movimientos.filter(m => !movsRef.current.has(m.clave));
+        nuevos.forEach(m => movsRef.current.add(m.clave));
+        const repetidos = r.movimientos.length - nuevos.length;
+        if (repetidos) r.avisos.push(repetidos === r.movimientos.length ? 'Esta cartola ya estaba cargada: no se agregó nada.' : `${repetidos} movimientos ya estaban cargados y se omitieron.`);
+        if (nuevos.length) setMovs(l => [...l, ...nuevos]);
+      }
       const f29 = r.f29;
       if (f29) setF29s(l => [...l.filter(x => !(x.periodo === f29.periodo && x.folio === f29.folio)), f29]);   // el mismo folio no se duplica
       setFichas(fs => fs.map(x => (x.id === nuevas[i].id ? { ...x, leyendo: false, resultado: r } : x)));
@@ -68,7 +83,7 @@ export default function App() {
 
   function cambiarEmpresa() {
     if (!confirm('Cambiar de empresa borra los documentos cargados en este navegador. ¿Continuar?')) return;
-    setEmpresa(null); setDocs([]); setF29s([]); setFichas([]);
+    setEmpresa(null); setDocs([]); setF29s([]); setMovs([]); setReglas([]); setFichas([]);
     try { localStorage.removeItem(CLAVE_EMPRESA); } catch { /* sin almacenamiento */ }
   }
 
@@ -78,7 +93,7 @@ export default function App() {
         <div className="marca"><span className="timbre-logo" aria-hidden>CT</span><span>Control Tributario</span></div>
         <div className="empresa"><strong>{empresa.razonSocial}</strong><span>RUT {empresa.rut}</span>
           <button className="enlace" onClick={cambiarEmpresa}>Cambiar</button></div>
-        <button className="boton resumen" onClick={() => setVerResumen(true)} disabled={!docs.length && !f29s.length}
+        <button className="boton resumen" onClick={() => setVerResumen(true)} disabled={!docs.length && !f29s.length && !movs.length}
           title={docs.length || f29s.length ? 'Ver cómo va la empresa en el año' : 'Carga documentos para ver el resumen'}>Resumen del año</button>
       </header>
 
@@ -122,9 +137,13 @@ export default function App() {
         </section>
 
         {(docs.length > 0 || f29s.length > 0) && <PanelIVA docs={docs} f29s={f29s} />}
+        {movs.length > 0 && <PanelBanco movs={movs} docs={docs} f29s={f29s} reglas={reglas} rutEmpresa={empresa.rut}
+          onCambio={(m, d, r) => { setMovs(m); if (d) setDocs(d); if (r) setReglas(r); }}
+          onBorrar={() => { if (confirm('¿Borrar los movimientos del banco y las reglas? Las facturas marcadas como pagadas o cobradas vuelven a quedar pendientes.')) {
+            setMovs([]); setReglas([]); setDocs(ds => ds.map(d => (d.fechaPago ? { ...d, estado: d.libro === 'VENTA' ? 'POR COBRAR' : 'POR PAGAR', fechaPago: undefined } : d))); } }} />}
       </main>
 
-      {verResumen && <ResumenAnio docs={docs} f29s={f29s} empresa={empresa} onCerrar={() => setVerResumen(false)} />}
+      {verResumen && <ResumenAnio docs={docs} f29s={f29s} movs={movs} empresa={empresa} onCerrar={() => setVerResumen(false)} />}
     </div>
   );
 }

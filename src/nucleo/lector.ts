@@ -3,6 +3,7 @@ import { extraer, type Servicios, type Formato } from './extraer';
 import { clasificar, NOMBRE_TIPO, type Clasificacion, type TipoDoc } from './clasificar';
 import { importarRCV, type Documento, type Empresa } from './rcv';
 import { leerF29, controlF29, type F29 } from './f29';
+import { leerCartola, type Movimiento } from './cartola';
 
 export type Estado = 'leido' | 'reconocido' | 'otra_empresa' | 'no_reconocido' | 'error';
 
@@ -16,11 +17,12 @@ export interface ResultadoLectura {
   avisos: string[];
   documentos: Documento[];  // documentos del RCV leídos
   f29?: F29;                // formulario 29 leído
+  movimientos?: Movimiento[];   // movimientos de una cartola
 }
 
 // En qué etapa del plan se agrega la lectura completa de cada tipo (mientras tanto se reconoce y se informa)
 const ETAPA: Partial<Record<TipoDoc, string>> = {
-  F22: 'la etapa de contabilidad', CARPETA_TRIBUTARIA: 'la etapa de contabilidad', CARTOLA: 'la etapa de banco',
+  F22: 'la etapa de contabilidad', CARPETA_TRIBUTARIA: 'la etapa de contabilidad',
   REMUNERACIONES: 'la etapa de remuneraciones', HONORARIOS: 'la etapa de remuneraciones', LIBRO_DIARIO: 'la etapa de contabilidad',
   FACTURA: 'una próxima etapa', BOLETA: 'una próxima etapa',
 };
@@ -68,6 +70,16 @@ export async function leerArchivo(nombre: string, bytes: Uint8Array, ctx: Contex
     res.mensaje = (n === 0 ? 'Ningún documento nuevo' : n === 1 ? '1 documento cargado' : `${n} documentos cargados`)
       + (r.duplicados ? `, ${r.duplicados === 1 ? '1 repetido omitido' : r.duplicados + ' repetidos omitidos'}` : '')
       + (r.lineasInvalidas ? `, ${r.lineasInvalidas} líneas sin tipo, folio o fecha` : '') + '.';
+    return res;
+  }
+  if (cl.tipo === 'CARTOLA') {
+    const c = leerCartola(nombre, contenido, cl.banco);
+    res.avisos.push(...c.avisos);
+    if (!c.movimientos.length) { res.mensaje = c.mensaje; return res; }
+    res.estado = 'leido';
+    res.movimientos = c.movimientos;
+    res.titulo = `Cartola${cl.banco ? ' ' + cl.banco : ''}${c.cuenta ? ', cuenta ' + c.cuenta : ''}${cl.periodo ? ', ' + periodoLegible(cl.periodo) : ''}`;
+    res.mensaje = c.mensaje + (c.cuadra === false ? ' Los saldos no cuadran: revisa los avisos.' : '');
     return res;
   }
   if (cl.tipo === 'F29') {
