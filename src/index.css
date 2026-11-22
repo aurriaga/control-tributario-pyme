@@ -245,3 +245,17 @@ tr.anulada td.estado-doc { text-decoration: none; }
 .anular { display: inline-flex; gap: 8px; align-items: center; }
 .anular input { padding: 4px 8px; border-radius: 8px; border: 2px solid var(--linea); background: var(--papel); min-width: 220px; }
 .anular .enlace.peligro { margin: 0; }
+
+/* Cascada del resultado (Resumen del año) */
+.resultado-anio { margin-top: 30px; }
+.resultado-anio h3 { font-size: 20px; margin-bottom: 12px; }
+.cascada { display: grid; gap: 6px; }
+.paso { display: grid; grid-template-columns: minmax(150px, 280px) 1fr minmax(110px, auto); gap: 12px; align-items: center; font-size: 15px; }
+.paso.subtotal .etiqueta, .paso.total .etiqueta { font-weight: 700; }
+.paso.total { border-top: 2px solid var(--grafito); padding-top: 6px; }
+.pista-cascada { position: relative; height: 22px; }
+.pista-cascada b { position: absolute; top: 2px; bottom: 2px; border-radius: 4px; }
+.pista-cascada b.sube { background: var(--verde); } .pista-cascada b.baja { background: var(--rojo); } .pista-cascada b.sub { background: var(--anil); }
+.pista-cascada .cero { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--grafito); opacity: .5; }
+@media (max-width: 720px) { .paso { grid-template-columns: 1fr auto; } .pista-cascada { grid-column: 1 / -1; grid-row: 2; } }
+@media print { .paso { break-inside: avoid; } .pista-cascada b { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }

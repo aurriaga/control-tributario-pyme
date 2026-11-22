@@ -24,8 +24,8 @@ de Excel con macros.
   y los controles, aprende la categoría de gasto de cada proveedor y se descarga en Excel.
 - **Panel del mes** con lo cargado y lo que falta, y los **17 controles** automáticos; se puede **anular** un documento que
   no existe en el SII, **descargar todo en Excel** y **guardar o abrir un respaldo** para llevar el trabajo a otro computador.
-- **Resumen del año**: ventas, compras, IVA, mes a mes, principales clientes y proveedores y alertas; se descarga
-  en PDF o Excel.
+- **Resumen del año**: ventas, compras, IVA, mes a mes, principales clientes y proveedores, el resultado contable en
+  cascada (de las ventas al resultado) y alertas; se descarga en PDF o Excel.
 
 El avance de la migración está en [PLAN.md](PLAN.md).
 

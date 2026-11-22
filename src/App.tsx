@@ -200,7 +200,7 @@ export default function App() {
           cfg={conta} onCfg={setConta} controles={controles} />}
       </main>
 
-      {verResumen && <ResumenAnio docs={docs} f29s={f29s} movs={movs} libros={libros} honorarios={honorarios} empresa={empresa} onCerrar={() => setVerResumen(false)} />}
+      {verResumen && <ResumenAnio docs={docs} f29s={f29s} movs={movs} libros={libros} honorarios={honorarios} empresa={empresa} cfg={conta} controles={controles} onCerrar={() => setVerResumen(false)} />}
     </div>
   );
 }

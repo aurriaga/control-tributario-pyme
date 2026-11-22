@@ -7,11 +7,13 @@ import type { Movimiento } from './nucleo/cartola';
 import { resumenPersonal, librosFaltantes, type LibroRemuneraciones, type MesHonorarios } from './nucleo/remuneraciones';
 import { periodoLegible } from './nucleo/lector';
 import { pesos } from './formato';
+import { contabilidad, type ConfigContable, type Control } from './nucleo/contabilidad';
+import Cascada from './Cascada';
 
 const MES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 const millones = (n: number) => (n < 0 ? '−' : '') + '$' + (Math.abs(n) / 1e6).toLocaleString('es-CL', { maximumFractionDigits: 1, minimumFractionDigits: 1 }) + ' M';
 
-export default function ResumenAnio({ docs, f29s, movs, libros, honorarios, empresa, onCerrar }: { docs: Documento[]; f29s: F29[]; movs: Movimiento[]; libros: LibroRemuneraciones[]; honorarios: MesHonorarios[]; empresa: Empresa; onCerrar: () => void }) {
+export default function ResumenAnio({ docs, f29s, movs, libros, honorarios, empresa, cfg, controles, onCerrar }: { docs: Documento[]; f29s: F29[]; movs: Movimiento[]; libros: LibroRemuneraciones[]; honorarios: MesHonorarios[]; empresa: Empresa; cfg: ConfigContable; controles: Control[]; onCerrar: () => void }) {
   const anios = useMemo(() => [...new Set([...aniosDisponibles(docs), ...f29s.map(f => Number(f.periodo.slice(0, 4)))])].sort((a, b) => b - a), [docs, f29s]);
   const [anio, setAnio] = useState(anios[0] ?? new Date().getFullYear());
   const r = useMemo(() => resumenAnual(docs, anio), [docs, anio]);
@@ -30,13 +32,23 @@ export default function ResumenAnio({ docs, f29s, movs, libros, honorarios, empr
     return { hay: meses.length > 0, remuneraciones: s('haberes'), aporte: s('aporteEmpleador'), honorarios: s('honorariosBruto'),
       total: s('haberes') + s('aporteEmpleador') + s('honorariosBruto'), faltan: librosFaltantes(libros).filter(p => p.startsWith(String(anio))) };
   }, [libros, honorarios, movs, anio]);
+  // Contabilidad del año: Estado de resultados de enero a diciembre y partidas por identificar al cierre
+  const conta = useMemo(() => {
+    const r = contabilidad({ empresa: empresa.rut, docs, f29s, movs, libros, honorarios }, cfg, `${anio}-01`, `${anio}-12`);
+    const hay = r.diario.some(f => f.mes.startsWith(String(anio)));
+    const transitorias = r.balance.filas.filter(f => f.transitoria).map(f => ({ cuenta: `${f.codigo} ${f.cuenta}`, saldo: f.deudor - f.acreedor })).filter(t => Math.abs(t.saldo) >= 1);
+    return { hay, eerr: r.eerr, resultado: r.balance.resultado, transitorias, porIdentificar: transitorias.reduce((s, t) => s + Math.abs(t.saldo), 0) };
+  }, [empresa, docs, f29s, movs, libros, honorarios, cfg, anio]);
+  const revisar = controles.filter(c => c.estado === 'Revisar');
   const alertas = useMemo(() => [
+    ...(revisar.length ? [{ nivel: 'falta' as const, texto: `${revisar.length} control${revisar.length > 1 ? 'es' : ''} en Revisar: ${revisar.map(c => c.nombre).join('; ')}.` }] : []),
+    ...(conta.hay && conta.porIdentificar ? [{ nivel: 'revisar' as const, texto: `${pesos(conta.porIdentificar)} en partidas por identificar al cierre (${conta.transitorias.map(t => t.cuenta.replace(/ \(transitoria\)/, '')).join(', ')}): el resultado puede cambiar cuando se aclaren.` }] : []),
     ...(personal.faltan.length ? [{ nivel: 'falta' as const, texto: `Falta el libro de remuneraciones de ${personal.faltan.map(periodoLegible).join(', ')}.` }] : []),
     ...(banco.sinIdentificar ? [{ nivel: 'revisar' as const, texto: `${banco.sinIdentificar} movimientos del banco sin identificar (${pesos(banco.montoSinIdentificar)} entre cargos y abonos).` }] : []),
     ...rf.conDiferencias.map(p => ({ nivel: 'falta' as const, texto: `El F29 de ${periodoLegible(p)} no cuadra con el RCV: revisa la sección IVA y F29.` })),
     ...(rf.sinF29.length ? [{ nivel: 'revisar' as const, texto: `Sin F29 cargado: ${rf.sinF29.map(periodoLegible).join(', ')}.` }] : []),
     ...r.alertas,
-  ], [r, rf, banco, personal]);
+  ], [r, rf, banco, personal, conta, revisar]);
   const tope = Math.max(1, ...r.meses.map(m => Math.max(m.ventas, m.compras)));
 
   function descargarExcel() {
@@ -47,6 +59,7 @@ export default function ResumenAnio({ docs, f29s, movs, libros, honorarios, empr
     XLSX.utils.book_append_sheet(libro, XLSX.utils.aoa_to_sheet(filas), 'Resumen mensual');
     XLSX.utils.book_append_sheet(libro, XLSX.utils.aoa_to_sheet([['Cliente', 'RUT', 'Ventas netas', 'Participación'], ...r.clientes.map(c => [c.nombre, c.rut, c.monto, c.participacion])]), 'Principales clientes');
     XLSX.utils.book_append_sheet(libro, XLSX.utils.aoa_to_sheet([['Proveedor', 'RUT', 'Compras netas', 'Participación'], ...r.proveedores.map(c => [c.nombre, c.rut, c.monto, c.participacion])]), 'Principales proveedores');
+    if (conta.hay) XLSX.utils.book_append_sheet(libro, XLSX.utils.aoa_to_sheet([['Concepto', 'Monto'], ...conta.eerr.map(l => [l.concepto, l.monto])]), 'Estado de resultados');
     XLSX.writeFile(libro, `Resumen_${anio}.xlsx`);
   }
 
@@ -71,6 +84,7 @@ export default function ResumenAnio({ docs, f29s, movs, libros, honorarios, empr
           {r.margenPct !== null && <> Lo que queda después de las compras es <strong className={r.margen < 0 ? 'neg' : ''}>{millones(r.margen)}</strong>, un {Math.round(r.margenPct * 100)}% de las ventas.</>}
           {personal.hay ? <> Con el personal ({millones(personal.total)} entre sueldos, aporte del empleador y honorarios) queda <strong className={r.margen - personal.total < 0 ? 'neg' : ''}>{millones(r.margen - personal.total)}</strong>, antes de los gastos sin factura.</>
             : <>{' '}Aún no incluye sueldos, honorarios ni gastos sin factura.</>}
+          {conta.hay && <> Según la contabilidad, el año va con una <strong className={conta.resultado < 0 ? 'neg' : ''}>{conta.resultado >= 0 ? 'utilidad' : 'pérdida'} de {millones(Math.abs(conta.resultado))}</strong>.</>}
         </p>
 
         <div className="cifras">
@@ -104,6 +118,12 @@ export default function ResumenAnio({ docs, f29s, movs, libros, honorarios, empr
             ))}
           </div>
         </section>
+
+        {conta.hay && <section className="resultado-anio">
+          <h3>De las ventas al resultado</h3>
+          <Cascada eerr={conta.eerr} />
+          <p className="nota-borrador">Sale del Libro Diario de {anio}: compras por categoría, sueldos y honorarios centralizados, gastos del banco sin factura, depreciación y ajustes manuales.{conta.porIdentificar ? ` Hay ${pesos(conta.porIdentificar)} en partidas por identificar que todavía no entran al resultado.` : ''}</p>
+        </section>}
 
         <div className="dos">
           <Ranking titulo="Principales clientes" filas={r.clientes} />
