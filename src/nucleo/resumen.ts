@@ -32,7 +32,7 @@ function ranking(docs: Documento[], total: number): Contraparte[] {
 }
 
 export function resumenAnual(docs: Documento[], anio: number): ResumenAnual {
-  const delAnio = docs.filter(d => periodoDe(d).startsWith(String(anio)));
+  const delAnio = docs.filter(d => d.estado !== 'ANULADA' && periodoDe(d).startsWith(String(anio)));
   const meses: Mes[] = Array.from({ length: 12 }, (_, i) => ({ periodo: `${anio}-${String(i + 1).padStart(2, '0')}`, ventas: 0, compras: 0, ivaDebito: 0, ivaCredito: 0, docsVenta: 0, docsCompra: 0 }));
   for (const d of delAnio) {
     const m = meses[Number(periodoDe(d).slice(5, 7)) - 1];

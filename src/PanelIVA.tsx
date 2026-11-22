@@ -6,17 +6,18 @@ import { pesos } from './formato';
 import type { LibroRemuneraciones, MesHonorarios } from './nucleo/remuneraciones';
 
 const CLASE: Record<EstadoCuadratura, string> = { Cuadra: 'verde', Diferencias: 'rojo', 'Falta F29': 'ambar', 'Falta RCV': 'ambar' };
-const CLAVE_UTM = 'ctp.utm', CLAVE_TASA = 'ctp.tasaPPM';
+const CLAVE_TASA = 'ctp.tasaPPM';
 const leerLS = <T,>(k: string, d: T): T => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) as T : d; } catch { return d; } };
 const guardarLS = (k: string, v: unknown) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* sin almacenamiento */ } };
 const celda = (n: number | null) => (n === null ? '—' : pesos(n));
 
-export default function PanelIVA({ docs, f29s, libros, honorarios }: { docs: Documento[]; f29s: F29[]; libros: LibroRemuneraciones[]; honorarios: MesHonorarios[] }) {
+export default function PanelIVA({ docs, f29s, libros, honorarios, utmUsuario, onUtm }: { docs: Documento[]; f29s: F29[]; libros: LibroRemuneraciones[]; honorarios: MesHonorarios[];
+  utmUsuario: Record<string, number>; onUtm: (u: Record<string, number>) => void }) {
   const filas = useMemo(() => cuadratura(docs, f29s), [docs, f29s]);
   const periodos = useMemo(() => filas.map(f => f.periodo).sort().reverse(), [filas]);
   const sugerido = filas.slice().reverse().find(f => f.estado === 'Falta F29')?.periodo ?? periodos[0] ?? '';
   const [periodo, setPeriodo] = useState<string | null>(null);     // null: sigue el mes sugerido (el último sin F29)
-  const [utm, setUtm] = useState<Record<string, number>>(() => ({ ...UTM_SII, ...leerLS<Record<string, number>>(CLAVE_UTM, {}) }));
+  const utm = useMemo(() => ({ ...UTM_SII, ...utmUsuario }), [utmUsuario]);
   const [tasaTxt, setTasaTxt] = useState<string>(() => leerLS<string>(CLAVE_TASA, ''));
   const tasaManual = tasaTxt.trim() ? Number(tasaTxt.replace(',', '.')) / 100 : undefined;
   const per = periodo && periodos.includes(periodo) ? periodo : sugerido;
@@ -31,8 +32,8 @@ export default function PanelIVA({ docs, f29s, libros, honorarios }: { docs: Doc
 
   function cambiarUTM(p: string, v: string) {
     const n = Number(v.replace(/\./g, ''));
-    const nuevo = { ...utm }; if (n > 0) nuevo[p] = n; else delete nuevo[p];
-    setUtm(nuevo); guardarLS(CLAVE_UTM, nuevo);
+    const nuevo = { ...utmUsuario }; if (n > 0) nuevo[p] = n; else delete nuevo[p];
+    onUtm(nuevo);
   }
 
   return (

@@ -143,7 +143,7 @@ export function asignarCategoria(provCategoria: Record<string, string>, rut: str
 export function proveedoresSinCategoria(docs: Documento[], provCategoria: Record<string, string>, empresa: string) {
   const m = new Map<string, { rut: string; nombre: string; compras: number; monto: number }>();
   for (const d of docs) {
-    if (d.libro !== 'COMPRA' || d.empresa !== empresa || esLiquidacion(d)) continue;
+    if (d.libro !== 'COMPRA' || d.empresa !== empresa || esLiquidacion(d) || d.estado === 'ANULADA') continue;
     const c = categoriaDe(d, provCategoria);
     if (c && c !== 'Por revisar') continue;
     const x = m.get(d.rutContraparte) ?? { rut: d.rutContraparte, nombre: d.razonSocial, compras: 0, monto: 0 };
@@ -184,7 +184,7 @@ export function generarAsientos(e: Entradas, cfg: ConfigContable): ResultadoAsie
   };
   const cuentaCategoria = (cat: string) => catCuenta.get(cat.trim().toLowerCase()) ?? C.POR_REVISAR;
   const cuentaBanco = (cuenta: string) => { const d = soloDig(cuenta); return bancos.find(([n]) => d && d.includes(n))?.[1] ?? C.BANCO; };
-  const docs = e.docs.filter(d => d.empresa === e.empresa && d.folio && d.estado as string !== 'ANULADA');
+  const docs = e.docs.filter(d => d.empresa === e.empresa && d.folio && d.estado !== 'ANULADA');
 
   // Apertura (si no cuadra, la diferencia queda a la vista en 3190)
   if (cfg.apertura && cfg.apertura.lineas.some(l => l.debe || l.haber)) {

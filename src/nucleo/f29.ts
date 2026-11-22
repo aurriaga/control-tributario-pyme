@@ -69,7 +69,7 @@ export interface TotalesRCV { debito: number; credito: number; base: number; doc
 export function totalesRCV(docs: Documento[], periodo: string): TotalesRCV {
   const t: TotalesRCV = { debito: 0, credito: 0, base: 0, docsVenta: 0, docsCompra: 0 };
   for (const d of docs) {
-    if (periodoDe(d) !== periodo) continue;
+    if (periodoDe(d) !== periodo || d.estado === 'ANULADA') continue;
     const s = signo(d);
     if (d.libro === 'VENTA') { t.debito += s * d.iva; t.base += s * (d.neto + d.exento); t.docsVenta++; }
     else if (esLiquidacion(d)) { t.debito += d.iva; t.base += d.neto + d.exento; t.docsCompra++; }

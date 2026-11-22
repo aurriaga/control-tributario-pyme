@@ -24,12 +24,24 @@ export interface Documento {
   otrosImpuestos: number;   // total − exento − neto − IVA (− IVA no recuperable)
   total: number;
   plazoDias: number;
-  estado: 'POR COBRAR' | 'POR PAGAR' | 'COBRADA' | 'PAGADA';
+  estado: 'POR COBRAR' | 'POR PAGAR' | 'COBRADA' | 'PAGADA' | 'ANULADA';   // ANULADA: no existe en el SII o el usuario la anuló
   fechaPago?: string;       // AAAA-MM-DD del movimiento del banco que la cobró o pagó
   origen: string;           // "RCV <nombre del archivo>"
   observacion: string;
   periodoRCV: string;       // AAAA-MM del archivo del SII ('' si no viene en el nombre)
   categoria?: string;       // compras: categoría de gasto puesta a mano (si no, la aprendida para el proveedor)
+}
+
+/** Un documento anulado no cuenta en el IVA, el F29, el resumen ni la contabilidad, pero se conserva para la trazabilidad. */
+export const vigente = (d: Documento) => d.estado !== 'ANULADA';
+const hoyTexto = () => { const f = new Date(); return `${String(f.getDate()).padStart(2, '0')}-${String(f.getMonth() + 1).padStart(2, '0')}-${f.getFullYear()}`; };
+export function anularDocumento(d: Documento, motivo: string, fecha = hoyTexto()): Documento {
+  return { ...d, estado: 'ANULADA', observacion: `Anulado el ${fecha}${motivo.trim() ? `: ${motivo.trim()}` : ''}.${d.observacion ? ' ' + d.observacion : ''}` };
+}
+/** Vuelve a dejar vigente un documento anulado: pagado o cobrado si tiene fecha de pago, si no pendiente. */
+export function reactivarDocumento(d: Documento): Documento {
+  const estado = d.fechaPago ? (d.libro === 'VENTA' ? 'COBRADA' : 'PAGADA') : (d.libro === 'VENTA' ? 'POR COBRAR' : 'POR PAGAR');
+  return { ...d, estado, observacion: d.observacion.replace(/^Anulado el [^.]*.s*/, '') };
 }
 
 export interface Empresa { rut: string; razonSocial: string }

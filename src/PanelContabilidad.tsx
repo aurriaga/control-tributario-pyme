@@ -7,13 +7,14 @@ import type { LibroRemuneraciones, MesHonorarios } from './nucleo/remuneraciones
 import { periodoLegible } from './nucleo/lector';
 import {
   contabilidad, balance8, estadoResultados, mayor, aperturaSugerida, proveedoresSinCategoria, asignarCategoria, ordenarPlan, PLAN_BASE,
-  CATEGORIAS_GASTO, type ConfigContable, type Cuenta, type TipoCuenta, type LineaApertura, type LineaManual, type Origen, type EstadoControl,
+  CATEGORIAS_GASTO, type ConfigContable, type Cuenta, type TipoCuenta, type LineaApertura, type LineaManual, type Origen, type EstadoControl, type Control,
 } from './nucleo/contabilidad';
 import { pesos } from './formato';
 
 interface Props {
   empresa: string; docs: Documento[]; f29s: F29[]; movs: Movimiento[]; libros: LibroRemuneraciones[]; honorarios: MesHonorarios[];
   cfg: ConfigContable; onCfg: (c: ConfigContable) => void;
+  controles?: Control[];       // los 17 controles generales (si no, solo los contables)
 }
 type Pestana = 'revision' | 'resultados' | 'balance' | 'diario' | 'mayor' | 'categorias' | 'ajustes' | 'plan';
 const PESTANAS: [Pestana, string][] = [['revision', 'Revisión'], ['resultados', 'Estado de resultados'], ['balance', 'Balance'], ['diario', 'Libro Diario'],
@@ -24,7 +25,7 @@ const fechaCorta = (iso: string) => `${iso.slice(8, 10)}-${iso.slice(5, 7)}-${is
 const num = (s: string) => Math.round(Number(s.replace(/\./g, '').replace(',', '.')) || 0);
 const vacio = (n: number) => (n ? pesos(n) : '');
 
-export default function PanelContabilidad({ empresa, docs, f29s, movs, libros, honorarios, cfg, onCfg }: Props) {
+export default function PanelContabilidad({ empresa, docs, f29s, movs, libros, honorarios, cfg, onCfg, controles }: Props) {
   const [pestana, setPestana] = useState<Pestana>('revision');
   const r = useMemo(() => contabilidad({ empresa, docs, f29s, movs, libros, honorarios }, cfg), [empresa, docs, f29s, movs, libros, honorarios, cfg]);
   const meses = useMemo(() => [...new Set(r.diario.map(f => f.mes))].sort(), [r.diario]);
@@ -33,7 +34,8 @@ export default function PanelContabilidad({ empresa, docs, f29s, movs, libros, h
   const desde = rango?.desde ?? meses.find(m => m.startsWith(ultimo.slice(0, 4))) ?? '', hasta = rango?.hasta ?? ultimo;
   const bal = useMemo(() => balance8(r.diario, cfg.plan, desde, hasta), [r.diario, cfg.plan, desde, hasta]);
   const eerr = useMemo(() => estadoResultados(bal, cfg.plan), [bal, cfg.plan]);
-  const pendientes = r.controles.filter(c => c.estado !== 'OK').length;
+  const lista = controles ?? r.controles;
+  const pendientes = lista.filter(c => c.estado !== 'OK').length;
 
   function descargar() {
     const libro = XLSX.utils.book_new();
@@ -45,7 +47,7 @@ export default function PanelContabilidad({ empresa, docs, f29s, movs, libros, h
       ['', 'Sumas', ...Object.values(bal.sumas)], ['', bal.resultado >= 0 ? 'Utilidad del período' : 'Pérdida del período', '', '', '', '',
         Math.max(0, -bal.resultado), Math.max(0, bal.resultado), Math.max(0, bal.resultado), Math.max(0, -bal.resultado)]], 'Balance 8 columnas');
     hoja([['Concepto', 'Monto'], ...eerr.flatMap(l => [[l.concepto, l.monto], ...(l.cuentas ?? []).map(c => [`   ${c.codigo} ${c.cuenta}`, c.monto])])], 'Estado de resultados');
-    hoja([['Control', 'Estado', 'Resultado', 'Qué hacer'], ...r.controles.map(c => [c.nombre, c.estado, c.resultado, c.accion])], 'Controles');
+    hoja([['Control', 'Estado', 'Resultado', 'Qué hacer'], ...lista.map(c => [c.nombre, c.estado, c.resultado, c.accion])], 'Controles');
     hoja([['Código', 'Cuenta', 'Tipo', 'Categoría de gasto', 'Cuenta bancaria', 'Transitoria'],
       ...cfg.plan.map(c => [c.codigo, c.nombre, c.tipo, c.categoria ?? '', c.cuentaBancaria ?? '', c.transitoria ? 'SI' : 'NO'])], 'Plan de cuentas');
     XLSX.writeFile(libro, `Contabilidad_${desde}_${hasta}.xlsx`);
@@ -70,7 +72,7 @@ export default function PanelContabilidad({ empresa, docs, f29s, movs, libros, h
             {meses.map(m => <option key={m} value={m}>{periodoLegible(m)}</option>)}</select></label>
         </div>)}
 
-      {pestana === 'revision' && <Revision r={r} />}
+      {pestana === 'revision' && <Revision r={r} controles={lista} />}
       {pestana === 'resultados' && <Resultados eerr={eerr} cuadra={bal.cuadra} resultado={bal.resultado} />}
       {pestana === 'balance' && <TablaBalance bal={bal} />}
       {pestana === 'diario' && <Diario filas={r.diario} />}
@@ -82,10 +84,10 @@ export default function PanelContabilidad({ empresa, docs, f29s, movs, libros, h
   );
 }
 
-function Revision({ r }: { r: ReturnType<typeof contabilidad> }) {
+function Revision({ r, controles }: { r: ReturnType<typeof contabilidad>; controles: Control[] }) {
   const trans = r.diario.filter(f => f.origen === 'Banco' && (f.codigo === 1199 || f.codigo === 2190));
   return (<>
-    <ul className="controles">{r.controles.map(c => (
+    <ul className="controles">{controles.map(c => (
       <li key={c.nombre} className={CHIP[c.estado]}>
         <div className="sug-mov"><span className={`chip ${CHIP[c.estado]}`}>{c.estado}</span><b>{c.nombre}</b></div>
         <p className="sug-motivo">{c.resultado}</p>
