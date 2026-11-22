@@ -11,6 +11,9 @@ de Excel con macros.
 La app se recorre con el **menú de la izquierda**: Inicio, Cargar documentos, Por clasificar, Compras y ventas, IVA y F29,
 Personal, Banco, Contabilidad y Resumen del año (en el celular, el menú queda arriba).
 
+**Multiempresa**: arriba del menú se elige la empresa o se agrega otra; cada una guarda sus documentos, banco, reglas y
+contabilidad por separado, y abrir el respaldo de otra empresa la agrega sin tocar las demás.
+
 - **Lector de documentos**: arrastra cualquier archivo (CSV, Excel, PDF, fotos o PDF escaneados con OCR) y la app
   reconoce qué es por su contenido: RCV de compras o ventas, cartolas (y su banco), F29, F22, carpeta tributaria,
   libros de remuneraciones, boletas de honorarios y Libro Diario. No carga documentos de otra empresa.

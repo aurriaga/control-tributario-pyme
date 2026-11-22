@@ -29,7 +29,7 @@ que se abre desde GitHub Pages y procesa los archivos **en el navegador**: nada 
 
 ## Próximos pasos (acordados el 22-11-2026)
 
-1. **Multiempresa**: guardar varias empresas en el mismo navegador y cambiar entre ellas sin perder datos.
+1. **Multiempresa** (primera parte hecha el 22-11: datos por RUT con migración automática, selector, agregar y quitar empresa, respaldo por empresa; falta: que el lector ofrezca cargar un archivo en la empresa de su RUT, e IndexedDB): guardar varias empresas en el mismo navegador y cambiar entre ellas sin perder datos.
    - Datos separados por RUT (`ctp.<rut>.documentos`, etc.) y lista de empresas registradas; migrar los datos actuales sin pérdida.
    - Selector de empresa arriba del menú lateral; "Agregar empresa" (3 o 4 o más), cada una con su plan, reglas, memoria y respaldo.
    - El lector reconoce el RUT de cada archivo: si es de otra empresa registrada, ofrece cargarlo en esa en vez de rechazarlo.

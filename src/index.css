@@ -338,3 +338,8 @@ tr.apagada td { opacity: .5; }
   .contenido { padding: 16px 16px 60px; }
 }
 @media print { .menu-lateral { display: none !important; } .app-marco { display: block; } .app-marco > *:not(.velo) { display: none !important; } }
+
+/* Selector de empresa */
+.empresa-menu label { font-size: 12px; color: var(--tenue); }
+.empresa-menu select { width: 100%; padding: 6px 8px; border-radius: 8px; border: 2px solid var(--linea); background: var(--hoja); font: 700 14px var(--titulo); color: var(--grafito); }
+@media (max-width: 900px) { .empresa-menu { display: block; padding: 0; background: none; min-width: 150px; } .empresa-menu label, .empresa-menu span { display: none; } }

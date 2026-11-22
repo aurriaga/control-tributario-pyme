@@ -6,7 +6,8 @@ import { pesos } from './formato';
 import type { LibroRemuneraciones, MesHonorarios } from './nucleo/remuneraciones';
 
 const CLASE: Record<EstadoCuadratura, string> = { Cuadra: 'verde', Diferencias: 'rojo', 'Falta F29': 'ambar', 'Falta RCV': 'ambar' };
-const CLAVE_TASA = 'ctp.tasaPPM';
+import { claveActiva } from './almacen';
+const CLAVE_TASA = (() => { try { return claveActiva('tasaPPM'); } catch { return 'ctp.tasaPPM'; } })();
 const leerLS = <T,>(k: string, d: T): T => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) as T : d; } catch { return d; } };
 const guardarLS = (k: string, v: unknown) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* sin almacenamiento */ } };
 const celda = (n: number | null) => (n === null ? '—' : pesos(n));

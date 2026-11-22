@@ -17,16 +17,21 @@ import PanelContabilidad from './PanelContabilidad';
 import { configInicial, type ConfigContable } from './nucleo/contabilidad';
 import { anularDocumento, reactivarDocumento } from './nucleo/rcv';
 import PanelMes from './PanelMes';
-import { panelMes, mesesConDatos, crearRespaldo, leerRespaldo, CLAVES_RESPALDO } from './nucleo/panel';
+import { panelMes, mesesConDatos, crearRespaldo, leerRespaldo } from './nucleo/panel';
 import { controlesGenerales, observacionesDocumento } from './nucleo/controles';
 import { descargarTodo } from './exportar';
 import { iniciarRecorrido } from './recorrido';
+import { migrar, empresaActiva, empresas as listaEmpresas, claveDe, agregarEmpresa, activar, quitarEmpresa, datosDeEmpresa, importarRespaldo } from './almacen';
 import PorClasificar from './PorClasificar';
 import { contarPorClasificar } from './nucleo/porClasificar';
 import Icono, { type NombreIcono } from './Icono';
 
 // Todo se guarda solo en este navegador (localStorage). Nada se envía a un servidor.
-const CLAVE_EMPRESA = 'ctp.empresa', CLAVE_DOCS = 'ctp.documentos', CLAVE_F29 = 'ctp.f29', CLAVE_MOVS = 'ctp.movimientos', CLAVE_REGLAS = 'ctp.reglas', CLAVE_LIBROS = 'ctp.libros', CLAVE_HON = 'ctp.honorarios', CLAVE_CONTA = 'ctp.contabilidad', CLAVE_UTM = 'ctp.utm';
+// Multiempresa: cada empresa guarda sus datos aparte ("ctp.<RUT>.documentos"); se cambia de empresa recargando la página.
+try { migrar(localStorage); } catch { /* sin almacenamiento */ }
+const ACTIVA = (() => { try { return empresaActiva(localStorage); } catch { return null; } })();
+const K = (dato: string) => claveDe(ACTIVA?.rut ?? '', dato);
+const CLAVE_DOCS = K('documentos'), CLAVE_F29 = K('f29'), CLAVE_MOVS = K('movimientos'), CLAVE_REGLAS = K('reglas'), CLAVE_LIBROS = K('libros'), CLAVE_HON = K('honorarios'), CLAVE_CONTA = K('contabilidad'), CLAVE_UTM = K('utm');
 const leerLS = <T,>(k: string, def: T): T => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) as T : def; } catch { return def; } };
 // Devuelve false si el navegador no pudo guardar (sin espacio o almacenamiento bloqueado): la app lo avisa.
 const guardarLS = (k: string, v: unknown) => { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch { return false; } };
@@ -47,7 +52,9 @@ const vistaDeHash = (): Vista => { const h = location.hash.slice(1) as Vista; re
 interface Ficha { id: number; archivo: string; leyendo: boolean; resultado?: ResultadoLectura }
 
 export default function App() {
-  const [empresa, setEmpresa] = useState<Empresa | null>(() => leerLS<Empresa | null>(CLAVE_EMPRESA, null));
+  const [empresa] = useState<Empresa | null>(ACTIVA);
+  const [agregando, setAgregando] = useState(false);
+  const lista = useMemo(() => { try { return listaEmpresas(localStorage); } catch { return []; } }, []);
   const [docs, setDocs] = useState<Documento[]>(() => leerLS<Documento[]>(CLAVE_DOCS, []));
   const [f29s, setF29s] = useState<F29[]>(() => leerLS<F29[]>(CLAVE_F29, []));
   const [movs, setMovs] = useState<Movimiento[]>(() => leerLS<Movimiento[]>(CLAVE_MOVS, []));
@@ -124,16 +131,24 @@ export default function App() {
     return [...m.values()].sort((a, b) => b.periodo.localeCompare(a.periodo));
   }, [docs]);
 
-  if (!empresa) return <Bienvenida onGuardar={e => { setEmpresa(e); guardarLS(CLAVE_EMPRESA, e); }} />;
+  const nuevaEmpresa = (e: Empresa) => {
+    if (lista.some(x => x.rut === e.rut)) { activar(localStorage, e.rut); location.reload(); return; }
+    try { agregarEmpresa(localStorage, e); } catch { alert('El navegador no pudo guardar la empresa.'); return; }
+    location.hash = 'cargar'; location.reload();
+  };
+  if (!empresa || agregando) return <Bienvenida otras={lista} onGuardar={nuevaEmpresa} onCancelar={empresa ? () => setAgregando(false) : undefined} />;
 
-  function cambiarEmpresa() {
-    if (!confirm('Cambiar de empresa borra los documentos cargados en este navegador. ¿Continuar?')) return;
-    setEmpresa(null); setDocs([]); setF29s([]); setMovs([]); setReglas([]); setLibros([]); setHonorarios([]); setConta(configInicial()); setUtm({}); setFichas([]);
-    try { localStorage.removeItem(CLAVE_EMPRESA); } catch { /* sin almacenamiento */ }
+  function cambiarA(rut: string) {
+    if (rut === '__nueva') { setAgregando(true); return; }
+    activar(localStorage, rut); location.reload();
+  }
+  function quitarEsta() {
+    if (!confirm(`¿Quitar ${empresa!.razonSocial} de este navegador? Se borran sus documentos, banco, reglas y contabilidad guardados aquí. Si no tienes un respaldo, descárgalo antes.`)) return;
+    quitarEmpresa(localStorage, empresa!.rut); location.hash = ''; location.reload();
   }
 
   function guardarRespaldo() {
-    const datos = Object.fromEntries(CLAVES_RESPALDO.map(k => [k, leerLS<unknown>(k, undefined)]));
+    const datos = datosDeEmpresa(localStorage, empresa!);
     const blob = new Blob([JSON.stringify(crearRespaldo(datos))], { type: 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
     a.download = `Respaldo_ControlTributario_${empresa!.rut.replace(/\./g, '')}_${new Date().toISOString().slice(0, 10)}.json`; a.click();
@@ -142,12 +157,11 @@ export default function App() {
   async function abrirRespaldo(f: File) {
     const r = leerRespaldo(await f.text());
     if (!r.ok) { alert(r.error); return; }
-    const otra = r.respaldo.empresa.rut !== empresa!.rut ? `\n\nOjo: es de otra empresa (${r.respaldo.empresa.razonSocial}).` : '';
-    if (!confirm(`Abrir el respaldo de ${r.resumen}${otra}\n\nReemplaza todo lo que hay en este navegador. ¿Continuar?`)) return;
-    try {
-      CLAVES_RESPALDO.forEach(k => localStorage.removeItem(k));
-      for (const [k, v] of Object.entries(r.respaldo.datos)) localStorage.setItem(k, JSON.stringify(v));
-    } catch { alert('El navegador no pudo guardar el respaldo (¿sin espacio?).'); return; }
+    const existe = lista.some(x => x.rut === r.respaldo.empresa.rut);
+    const que = existe ? `Reemplaza los datos de ${r.respaldo.empresa.razonSocial} guardados en este navegador (las otras empresas no se tocan).` : `Se agrega ${r.respaldo.empresa.razonSocial} como otra empresa (las que ya tienes no se tocan).`;
+    if (!confirm(`Abrir el respaldo de ${r.resumen}\n\n${que} ¿Continuar?`)) return;
+    try { importarRespaldo(localStorage, r.respaldo); }
+    catch { alert('El navegador no pudo guardar el respaldo (¿sin espacio?).'); return; }
     location.reload();
   }
 
@@ -159,7 +173,14 @@ export default function App() {
     <div className="app-marco">
       <aside className="menu-lateral" aria-label="Menú principal">
         <div className="marca"><span className="timbre-logo" aria-hidden>CT</span><span>Control Tributario</span></div>
-        <div className="empresa-menu"><strong>{empresa.razonSocial}</strong><span>RUT {empresa.rut}</span></div>
+        <div className="empresa-menu">
+          <label htmlFor="sel-empresa">Empresa</label>
+          <select id="sel-empresa" value={empresa.rut} onChange={e => cambiarA(e.target.value)}>
+            {lista.map(x => <option key={x.rut} value={x.rut}>{x.razonSocial}</option>)}
+            <option value="__nueva">＋ Agregar empresa…</option>
+          </select>
+          <span>RUT {empresa.rut}{lista.length > 1 ? ` · ${lista.length} empresas` : ''}</span>
+        </div>
         <nav><ul>
           {MENU.map(([v, t]) => (
             <li key={v}><button className={vista === v ? 'activo' : ''} aria-current={vista === v ? 'page' : undefined} onClick={() => ir(v)}>
@@ -174,7 +195,8 @@ export default function App() {
           <button onClick={guardarRespaldo} title="Descarga un archivo con todo lo cargado, para guardarlo o llevarlo a otro computador"><Icono n="guardar" /><span>Guardar respaldo</span></button>
           <button onClick={() => respaldoRef.current?.click()}><Icono n="abrir" /><span>Abrir respaldo</span></button>
           <input ref={respaldoRef} type="file" accept=".json,application/json" hidden onChange={e => { const f = e.target.files?.[0]; if (f) abrirRespaldo(f); e.target.value = ''; }} />
-          <button onClick={cambiarEmpresa}><Icono n="cambiar" /><span>Cambiar empresa</span></button>
+          <button onClick={() => setAgregando(true)}><Icono n="cambiar" /><span>Agregar empresa</span></button>
+          <button onClick={quitarEsta}><Icono n="cambiar" /><span>Quitar esta empresa</span></button>
         </div>
       </aside>
 
@@ -309,18 +331,19 @@ function TablaDocs({ docs, onCambio }: { docs: Documento[]; onCambio: (d: Docume
   </>);
 }
 
-function Bienvenida({ onGuardar }: { onGuardar: (e: Empresa) => void }) {
+function Bienvenida({ onGuardar, onCancelar, otras = [] }: { onGuardar: (e: Empresa) => void; onCancelar?: () => void; otras?: Empresa[] }) {
   const [rut, setRut] = useState(''), [nombre, setNombre] = useState('');
   const ok = rutValido(rut) && nombre.trim().length > 1;
   return (
     <div className="app bienvenida">
       <div className="marca"><span className="timbre-logo" aria-hidden>CT</span><span>Control Tributario</span></div>
-      <h1>Ordena la información tributaria de tu pyme</h1>
-      <p className="bajada">Carga lo que ya descargas del SII y del banco: la app lo reconoce, lo cuadra y te muestra cómo va la empresa. Todo queda en tu navegador.</p>
+      <h1>{onCancelar ? 'Agrega otra empresa' : 'Ordena la información tributaria de tu pyme'}</h1>
+      <p className="bajada">{onCancelar ? `Cada empresa guarda sus documentos, banco, reglas y contabilidad por separado. Ya tienes ${otras.length}: ${otras.map(o => o.razonSocial).join(', ')}.` : 'Carga lo que ya descargas del SII y del banco: la app lo reconoce, lo cuadra y te muestra cómo va la empresa. Todo queda en tu navegador.'}</p>
       <form className="alta" onSubmit={e => { e.preventDefault(); if (ok) onGuardar({ rut: formatearRUT(rut), razonSocial: nombre.trim().toUpperCase() }); }}>
         <label>RUT de la empresa<input value={rut} onChange={e => setRut(e.target.value)} placeholder="77.777.777-7" inputMode="text" autoComplete="off" /></label>
         <label>Razón social<input value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Empresa de prueba SpA" autoComplete="organization" /></label>
-        <button className="boton grande" disabled={!ok}>Empezar</button>
+        <button className="boton grande" disabled={!ok}>{onCancelar ? 'Agregar empresa' : 'Empezar'}</button>
+        {onCancelar && <button type="button" className="enlace" onClick={onCancelar}>Volver</button>}
         {rut && !rutValido(rut) && <p className="error">Ese RUT no es válido: revisa el dígito verificador.</p>}
       </form>
     </div>
