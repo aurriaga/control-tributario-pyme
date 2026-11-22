@@ -1,0 +1,125 @@
+<TABLE BORDER=1>
+
+<tr><td colspan="4">Contribuyente: EMPRESA DE PRUEBA SPA<br>
+	RUT : 77777777-7<br>
+	Informe correpondiente al año 2026<br>
+	es_sociedad_profesionales: NO</td></tr><tr>
+<td rowspan="2" bgcolor="#CCCCCC"><div align="center"><font size="2" face="Arial"><strong>PERIODOS</strong></font></div></td>
+<td colspan="2" bgcolor="#CCCCCC"><div align="center"><strong>EMISIONES</strong></div></td>
+<td rowspan="2"><strong>(*)HONORARIO BRUTO</strong></td>
+<td rowspan="2"><strong>(*)RETENCION DE TERCEROS</strong></td>
+<td rowspan="2"><strong>(*)RETENCION CONTRIBUYENTE</strong></td>
+<td rowspan="2"><strong>(*)TOTAL LIQUIDO</strong></td>
+</tr><tr>
+<td><strong>(*)Vigentes</strong></td>
+<td><strong>Anuladas</strong></td>
+</tr><tr>
+<td bgcolor="#CCCCCC">ENERO</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr><tr>
+<td bgcolor="#CCCCCC">FEBRERO</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr><tr>
+<td bgcolor="#CCCCCC">MARZO</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr><tr>
+<td bgcolor="#CCCCCC">ABRIL</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr><tr>
+<td bgcolor="#CCCCCC">MAYO</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr><tr>
+<td bgcolor="#CCCCCC">JUNIO</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr><tr>
+<td bgcolor="#CCCCCC">JULIO</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr><tr>
+<td bgcolor="#CCCCCC">AGOSTO</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr><tr>
+<td bgcolor="#CCCCCC">SEPTIEMBRE</td>
+<td>1</td>
+<td></td>
+<td>100000</td>
+<td>15250</td>
+<td>0</td>
+<td>84750</td>
+</tr><tr>
+<td bgcolor="#CCCCCC">OCTUBRE</td>
+<td>1</td>
+<td></td>
+<td>5000</td>
+<td>0</td>
+<td>763</td>
+<td>4237</td>
+</tr><tr>
+<td bgcolor="#CCCCCC">NOVIEMBRE</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr><tr>
+<td bgcolor="#CCCCCC">DICIEMBRE</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr><tr>
+<td bgcolor="#CCCCCC">Totales</td>
+<td bgcolor="#CCCCCC">2</td>
+<td bgcolor="#CCCCCC"></td>
+<td bgcolor="#CCCCCC">105000</td>
+<td bgcolor="#CCCCCC">15250</td>
+<td bgcolor="#CCCCCC">763</td>
+<td bgcolor="#CCCCCC">88987</td>
+</tr>
+
+
+</table>
+
+(*) Los valores totales no consideran los montos de las boletas anuladas.

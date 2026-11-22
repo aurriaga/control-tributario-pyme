@@ -18,7 +18,7 @@ export function decodificar(bytes: Uint8Array): string {
     try { texto = new TextDecoder('utf-8', { fatal: true }).decode(bytes); }
     catch { texto = new TextDecoder('windows-1252').decode(bytes); }
   }
-  return texto.replace(/\u0000/g, '');
+  return texto.split(String.fromCharCode(0)).join('');
 }
 
 export function detectarSeparador(linea: string): string {
@@ -81,7 +81,7 @@ function isoDe(y: number, m: number, d: number) { return `${y}-${String(m).padSt
 export function parseMonto(v: unknown): number {
   if (v === null || v === undefined) return 0;
   if (typeof v === 'number') return v;
-  let s = String(v).trim().replace(/[$\s ]/g, '').toUpperCase().replace('CLP', '');
+  let s = String(v).trim().replace(/[$\s\u00a0]/g, '').toUpperCase().replace('CLP', '');
   if (!s || s === '-') return 0;
   let neg = false;
   if (s.startsWith('(') && s.endsWith(')')) { neg = true; s = s.slice(1, -1); }

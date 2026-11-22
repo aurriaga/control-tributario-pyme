@@ -1,117 +1,172 @@
-import { useEffect, useMemo, useState } from 'react';
-import { importarRCV, type Documento, type Empresa, type ResultadoImportacion } from './nucleo/rcv';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { Documento, Empresa } from './nucleo/rcv';
 import { formatearRUT, rutValido } from './nucleo/rut';
+import { leerArchivo, periodoLegible, type ResultadoLectura } from './nucleo/lector';
+import { periodoDe } from './nucleo/resumen';
+import { serviciosNavegador } from './servicios';
+import ResumenAnio from './ResumenAnio';
 
-// Los datos se guardan solo en este navegador (localStorage). Nada se envía a un servidor.
+// Todo se guarda solo en este navegador (localStorage). Nada se envía a un servidor.
 const CLAVE_EMPRESA = 'ctp.empresa', CLAVE_DOCS = 'ctp.documentos';
 const leerLS = <T,>(k: string, def: T): T => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) as T : def; } catch { return def; } };
-const guardarLS = (k: string, v: unknown) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* sin almacenamiento disponible */ } };
-const $ = (n: number) => '$' + Math.round(n).toLocaleString('de-DE');
-const signo = (d: Documento) => (d.tipoDoc === 61 ? -1 : 1);   // la nota de crédito resta
+const guardarLS = (k: string, v: unknown) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* sin almacenamiento */ } };
+import { pesos } from './formato';
+
+const SELLO: Record<ResultadoLectura['estado'], { texto: string; clase: string }> = {
+  leido: { texto: 'Cargado', clase: 'verde' },
+  reconocido: { texto: 'Reconocido', clase: 'anil' },
+  otra_empresa: { texto: 'Otra empresa', clase: 'ambar' },
+  no_reconocido: { texto: 'No reconocido', clase: 'rojo' },
+  error: { texto: 'No se pudo leer', clase: 'rojo' },
+};
+
+interface Ficha { id: number; archivo: string; leyendo: boolean; resultado?: ResultadoLectura }
 
 export default function App() {
   const [empresa, setEmpresa] = useState<Empresa | null>(() => leerLS<Empresa | null>(CLAVE_EMPRESA, null));
   const [docs, setDocs] = useState<Documento[]>(() => leerLS<Documento[]>(CLAVE_DOCS, []));
-  const [mensajes, setMensajes] = useState<ResultadoImportacion[]>([]);
-  const [filtro, setFiltro] = useState('');
+  const [fichas, setFichas] = useState<Ficha[]>([]);
+  const [arrastrando, setArrastrando] = useState(false);
+  const [verResumen, setVerResumen] = useState(false);
+  const entrada = useRef<HTMLInputElement>(null);
+  const clavesRef = useRef(new Set<string>());
+  const idRef = useRef(0);
 
-  useEffect(() => guardarLS(CLAVE_DOCS, docs), [docs]);
+  useEffect(() => { guardarLS(CLAVE_DOCS, docs); clavesRef.current = new Set(docs.map(d => d.clave)); }, [docs]);
 
-  async function cargar(archivos: FileList | null) {
-    if (!archivos || !empresa) return;
-    const claves = new Set(docs.map(d => d.clave));
-    const nuevos: Documento[] = [], res: ResultadoImportacion[] = [];
-    for (const f of Array.from(archivos)) {
-      const r = importarRCV(f.name, new Uint8Array(await f.arrayBuffer()), { empresas: [empresa], clavesExistentes: claves });
-      res.push(r); nuevos.push(...r.documentos);
+  async function leer(lista: FileList | File[]) {
+    if (!empresa) return;
+    const archivos = Array.from(lista);
+    const nuevas = archivos.map(f => ({ id: ++idRef.current, archivo: f.name, leyendo: true }));
+    setFichas(fs => [...nuevas, ...fs]);
+    for (let i = 0; i < archivos.length; i++) {
+      const f = archivos[i];
+      const r = await leerArchivo(f.name, new Uint8Array(await f.arrayBuffer()), { empresas: [empresa], clavesExistentes: clavesRef.current, servicios: serviciosNavegador });
+      if (r.documentos.length) setDocs(d => [...d, ...r.documentos]);
+      setFichas(fs => fs.map(x => (x.id === nuevas[i].id ? { ...x, leyendo: false, resultado: r } : x)));
     }
-    setDocs(d => [...d, ...nuevos]);
-    setMensajes(res);
   }
 
-  const resumen = useMemo(() => {
-    const m = new Map<string, { libro: string; periodo: string; n: number; neto: number; iva: number; total: number }>();
+  const porPeriodo = useMemo(() => {
+    const m = new Map<string, { periodo: string; ventas: number; compras: number; nV: number; nC: number }>();
     for (const d of docs) {
-      const periodo = d.periodoRCV || d.fechaEmision.slice(0, 7);
-      const k = d.libro + periodo;
-      const r = m.get(k) ?? { libro: d.libro, periodo, n: 0, neto: 0, iva: 0, total: 0 };
-      r.n++; r.neto += signo(d) * d.neto; r.iva += signo(d) * d.iva; r.total += signo(d) * d.total;
-      m.set(k, r);
+      const p = periodoDe(d), s = d.tipoDoc === 61 ? -1 : 1;
+      const r = m.get(p) ?? { periodo: p, ventas: 0, compras: 0, nV: 0, nC: 0 };
+      if (d.libro === 'VENTA') { r.ventas += s * (d.neto + d.exento); r.nV++; } else { r.compras += s * (d.neto + d.exento); r.nC++; }
+      m.set(p, r);
     }
-    return [...m.values()].sort((a, b) => (a.libro + a.periodo).localeCompare(b.libro + b.periodo));
+    return [...m.values()].sort((a, b) => b.periodo.localeCompare(a.periodo));
   }, [docs]);
 
-  const visibles = useMemo(() => {
-    const f = filtro.trim().toLowerCase();
-    return (f ? docs.filter(d => `${d.razonSocial} ${d.rutContraparte} ${d.folio}`.toLowerCase().includes(f)) : docs).slice(0, 300);
-  }, [docs, filtro]);
+  if (!empresa) return <Bienvenida onGuardar={e => { setEmpresa(e); guardarLS(CLAVE_EMPRESA, e); }} />;
 
   function cambiarEmpresa() {
-    if (!confirm('¿Cambiar de empresa? Se borran los documentos cargados en este navegador.')) return;
-    setEmpresa(null); setDocs([]);
+    if (!confirm('Cambiar de empresa borra los documentos cargados en este navegador. ¿Continuar?')) return;
+    setEmpresa(null); setDocs([]); setFichas([]);
     try { localStorage.removeItem(CLAVE_EMPRESA); } catch { /* sin almacenamiento */ }
   }
 
   return (
-    <main>
-      <header>
-        <p className="kicker">CONTROL TRIBUTARIO · PYME</p>
-        <h1>Registro de Compras y Ventas</h1>
-        <p className="nota">Los archivos se procesan en este navegador. Nada se sube a internet.</p>
+    <div className="app">
+      <header className="barra">
+        <div className="marca"><span className="timbre-logo" aria-hidden>CT</span><span>Control Tributario</span></div>
+        <div className="empresa"><strong>{empresa.razonSocial}</strong><span>RUT {empresa.rut}</span>
+          <button className="enlace" onClick={cambiarEmpresa}>Cambiar</button></div>
+        <button className="boton resumen" onClick={() => setVerResumen(true)} disabled={!docs.length}
+          title={docs.length ? 'Ver cómo va la empresa en el año' : 'Carga documentos para ver el resumen'}>Resumen del año</button>
       </header>
 
-      {!empresa ? <FormEmpresa onGuardar={e => { setEmpresa(e); guardarLS(CLAVE_EMPRESA, e); }} /> : (
-        <section className="tarjeta fila">
-          <div><strong>{empresa.razonSocial}</strong> · RUT {empresa.rut}</div>
-          <button className="secundario" onClick={cambiarEmpresa}>Cambiar empresa</button>
+      <main>
+        <section
+          className={`bandeja${arrastrando ? ' encima' : ''}`}
+          onDragOver={e => { e.preventDefault(); setArrastrando(true); }}
+          onDragLeave={() => setArrastrando(false)}
+          onDrop={e => { e.preventDefault(); setArrastrando(false); leer(e.dataTransfer.files); }}
+          aria-label="Lector de documentos"
+        >
+          <div className="hojas" aria-hidden><i /><i /><i /></div>
+          <div className="bandeja-texto">
+            <h1>Lector de documentos</h1>
+            <p className="bajada">Suelta aquí lo que descargaste del SII, del banco o de tu sistema de sueldos. La app reconoce cada documento por su contenido y te dice qué entendió.</p>
+            <button className="boton grande" onClick={() => entrada.current?.click()}>Elegir archivos</button>
+            <input ref={entrada} type="file" multiple hidden onChange={e => { if (e.target.files) leer(e.target.files); e.target.value = ''; }} />
+            <p className="formatos">Lee CSV, Excel, PDF y fotos o PDF escaneados. Los archivos no salen de tu navegador.</p>
+          </div>
         </section>
-      )}
 
-      {empresa && (
-        <section className="tarjeta">
-          <h2>1 · Cargar RCV del SII</h2>
-          <p>Archivos CSV de "Descargar detalle" del Registro de Compras y Ventas. Puedes elegir varios a la vez; los repetidos se omiten.</p>
-          <input type="file" accept=".csv,.txt" multiple onChange={e => { cargar(e.target.files); e.target.value = ''; }} />
-          {mensajes.length > 0 && <ul className="mensajes">{mensajes.map((m, i) => <li key={i} className={m.error ? 'error' : ''}>{m.mensaje}</li>)}</ul>}
-        </section>
-      )}
+        {fichas.length > 0 && (
+          <section className="mesa" aria-live="polite">
+            <div className="mesa-titulo"><h2>Lo que entendí</h2><button className="enlace" onClick={() => setFichas([])}>Limpiar la mesa</button></div>
+            <div className="fichas">{fichas.map(f => <FichaDoc key={f.id} f={f} />)}</div>
+          </section>
+        )}
 
-      {docs.length > 0 && (<>
-        <section className="tarjeta">
-          <div className="fila"><h2>2 · Resumen por período</h2>
-            <button className="secundario" onClick={() => { if (confirm('¿Borrar todos los documentos cargados?')) setDocs([]); }}>Borrar documentos</button></div>
-          <table>
-            <thead><tr><th>Libro</th><th>Período</th><th>Documentos</th><th>Neto</th><th>IVA</th><th>Total</th></tr></thead>
-            <tbody>{resumen.map(r => <tr key={r.libro + r.periodo}><td>{r.libro === 'VENTA' ? 'Ventas' : 'Compras'}</td><td>{r.periodo}</td><td className="n">{r.n}</td><td className="n">{$(r.neto)}</td><td className="n">{$(r.iva)}</td><td className="n">{$(r.total)}</td></tr>)}</tbody>
-          </table>
+        <section className="libros">
+          <h2>Compras y ventas cargadas</h2>
+          {porPeriodo.length === 0 ? <p className="vacio">Todavía no hay documentos. Empieza por los RCV de compras y ventas del SII.</p> : (<>
+            <table>
+              <thead><tr><th>Mes</th><th className="n">Ventas netas</th><th className="n">Compras netas</th><th className="n">Diferencia</th><th className="n">Documentos</th></tr></thead>
+              <tbody>{porPeriodo.map(p => (
+                <tr key={p.periodo}><td>{periodoLegible(p.periodo)}</td><td className="n">{pesos(p.ventas)}</td><td className="n">{pesos(p.compras)}</td>
+                  <td className={`n ${p.ventas - p.compras < 0 ? 'neg' : ''}`}>{pesos(p.ventas - p.compras)}</td><td className="n">{p.nV + p.nC}</td></tr>))}</tbody>
+            </table>
+            <details className="detalle"><summary>Ver los {docs.length} documentos</summary><TablaDocs docs={docs} /></details>
+            <button className="enlace peligro" onClick={() => { if (confirm('¿Borrar todos los documentos cargados en este navegador?')) setDocs([]); }}>Borrar documentos cargados</button>
+          </>)}
         </section>
-        <section className="tarjeta">
-          <div className="fila"><h2>3 · Documentos ({docs.length})</h2>
-            <input className="buscar" placeholder="Buscar por razón social, RUT o folio" value={filtro} onChange={e => setFiltro(e.target.value)} /></div>
-          <table>
-            <thead><tr><th>Libro</th><th>Tipo</th><th>Folio</th><th>Emisión</th><th>RUT</th><th>Razón social</th><th>Neto</th><th>IVA</th><th>Total</th><th>Observación</th></tr></thead>
-            <tbody>{visibles.map(d => <tr key={d.clave}><td>{d.libro === 'VENTA' ? 'V' : 'C'}</td><td>{d.tipoDoc}</td><td>{d.folio}</td><td>{d.fechaEmision}</td><td>{d.rutContraparte}</td><td>{d.razonSocial}</td><td className="n">{$(d.neto)}</td><td className="n">{$(d.iva)}</td><td className="n">{$(d.total)}</td><td className="obs">{d.observacion}</td></tr>)}</tbody>
-          </table>
-          {docs.length > visibles.length && <p className="nota">Se muestran {visibles.length} de {docs.length}. Usa el buscador para ver otros.</p>}
-        </section>
-      </>)}
-    </main>
+      </main>
+
+      {verResumen && <ResumenAnio docs={docs} empresa={empresa} onCerrar={() => setVerResumen(false)} />}
+    </div>
   );
 }
 
-function FormEmpresa({ onGuardar }: { onGuardar: (e: Empresa) => void }) {
+function FichaDoc({ f }: { f: Ficha }) {
+  if (f.leyendo || !f.resultado) return (
+    <article className="ficha leyendo"><p className="archivo">{f.archivo}</p><h3>Leyendo…</h3><p>Si es una foto o un PDF escaneado puede tardar un poco.</p></article>
+  );
+  const r = f.resultado, sello = SELLO[r.estado];
+  return (
+    <article className={`ficha ${sello.clase}`}>
+      <span className={`sello ${sello.clase}`}>{sello.texto}</span>
+      <h3>{r.titulo}</h3>
+      <p>{r.mensaje}</p>
+      {r.avisos.slice(0, 3).map((a, i) => <p key={i} className="aviso">{a}</p>)}
+      <p className="archivo" title={r.archivo}>{r.archivo}</p>
+    </article>
+  );
+}
+
+function TablaDocs({ docs }: { docs: Documento[] }) {
+  const [filtro, setFiltro] = useState('');
+  const vis = useMemo(() => {
+    const t = filtro.trim().toLowerCase();
+    return (t ? docs.filter(d => `${d.razonSocial} ${d.rutContraparte} ${d.folio}`.toLowerCase().includes(t)) : docs).slice(0, 300);
+  }, [docs, filtro]);
+  return (<>
+    <input className="buscar" placeholder="Buscar por nombre, RUT o folio" value={filtro} onChange={e => setFiltro(e.target.value)} />
+    <div className="desliza"><table>
+      <thead><tr><th>Libro</th><th>Tipo</th><th>Folio</th><th>Emisión</th><th>RUT</th><th>Razón social</th><th className="n">Neto</th><th className="n">IVA</th><th className="n">Total</th></tr></thead>
+      <tbody>{vis.map(d => <tr key={d.clave}><td>{d.libro === 'VENTA' ? 'Venta' : 'Compra'}</td><td>{d.tipoDoc}</td><td>{d.folio}</td><td>{d.fechaEmision}</td><td>{d.rutContraparte}</td><td>{d.razonSocial}</td><td className="n">{pesos(d.neto)}</td><td className="n">{pesos(d.iva)}</td><td className="n">{pesos(d.total)}</td></tr>)}</tbody>
+    </table></div>
+    {docs.length > vis.length && <p className="vacio">Se muestran {vis.length} de {docs.length}; usa el buscador para encontrar otros.</p>}
+  </>);
+}
+
+function Bienvenida({ onGuardar }: { onGuardar: (e: Empresa) => void }) {
   const [rut, setRut] = useState(''), [nombre, setNombre] = useState('');
   const ok = rutValido(rut) && nombre.trim().length > 1;
   return (
-    <section className="tarjeta">
-      <h2>Empresa</h2>
-      <p>Registra la empresa. Solo se importan los RCV cuyo nombre de archivo trae este RUT.</p>
-      <div className="fila izq">
-        <input placeholder="RUT (ej. 77.777.777-7)" value={rut} onChange={e => setRut(e.target.value)} />
-        <input placeholder="Razón social" value={nombre} onChange={e => setNombre(e.target.value)} />
-        <button disabled={!ok} onClick={() => onGuardar({ rut: formatearRUT(rut), razonSocial: nombre.trim().toUpperCase() })}>Guardar</button>
-      </div>
-      {rut && !rutValido(rut) && <p className="error">El RUT no es válido (revisa el dígito verificador).</p>}
-    </section>
+    <div className="app bienvenida">
+      <div className="marca"><span className="timbre-logo" aria-hidden>CT</span><span>Control Tributario</span></div>
+      <h1>Ordena la información tributaria de tu pyme</h1>
+      <p className="bajada">Carga lo que ya descargas del SII y del banco: la app lo reconoce, lo cuadra y te muestra cómo va la empresa. Todo queda en tu navegador.</p>
+      <form className="alta" onSubmit={e => { e.preventDefault(); if (ok) onGuardar({ rut: formatearRUT(rut), razonSocial: nombre.trim().toUpperCase() }); }}>
+        <label>RUT de la empresa<input value={rut} onChange={e => setRut(e.target.value)} placeholder="77.777.777-7" inputMode="text" autoComplete="off" /></label>
+        <label>Razón social<input value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Empresa de prueba SpA" autoComplete="organization" /></label>
+        <button className="boton grande" disabled={!ok}>Empezar</button>
+        {rut && !rutValido(rut) && <p className="error">Ese RUT no es válido: revisa el dígito verificador.</p>}
+      </form>
+    </div>
   );
 }

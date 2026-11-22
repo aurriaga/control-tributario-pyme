@@ -8,10 +8,12 @@ de Excel con macros.
 
 ## Qué hace hoy
 
-- Registra la empresa (RUT con dígito verificador).
-- Carga el Registro de Compras y Ventas (RCV) del SII: CSV con ";", UTF-16, con línea de título; omite duplicados;
-  rechaza archivos de otra empresa y avisa si falta el período del registro.
-- Muestra el resumen por período (neto, IVA y total) y el detalle de documentos.
+- **Lector de documentos**: arrastra cualquier archivo (CSV, Excel, PDF, fotos o PDF escaneados con OCR) y la app
+  reconoce qué es por su contenido: RCV de compras o ventas, cartolas (y su banco), F29, F22, carpeta tributaria,
+  libros de remuneraciones, boletas de honorarios y Libro Diario. No carga documentos de otra empresa.
+- Carga el Registro de Compras y Ventas del SII (CSV o Excel): omite duplicados y avisa si falta el período.
+- **Resumen del año**: ventas, compras, IVA, mes a mes, principales clientes y proveedores y alertas; se descarga
+  en PDF o Excel.
 
 El avance de la migración está en [PLAN.md](PLAN.md).
 

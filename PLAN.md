@@ -18,12 +18,12 @@ que se abre desde GitHub Pages y procesa los archivos **en el navegador**: nada 
 | Etapa | Módulos VBA de origen | Qué entrega la app | Estado |
 |---|---|---|---|
 | 1. Base y RCV | modRUT, modUtil, modImportRCV | Registro de empresa, carga de RCV de compras y ventas (CSV, UTF-16, con título), duplicados, resumen por período | **Hecha** |
-| 2. Lector de documentos, diseño y F29 | modDocumentos, modFacturas, modNormativa | Botón **Lector de documentos**: un solo lugar donde se arrastra cualquier archivo y la app reconoce qué es y lo lee (ver abajo). Nuevo diseño de la interfaz. Lectura de F29 en PDF, cuadratura IVA del RCV vs. F29, PPM y borrador del F29, clasificación de compras por categoría | Siguiente |
+| 2. Lector de documentos, diseño y F29 | modDocumentos, modFacturas, modNormativa | Botón **Lector de documentos** (hecho: reconoce todos los tipos y formatos y lee el RCV en CSV o Excel). Nuevo diseño (hecho). Falta: lectura de F29 en PDF, cuadratura IVA del RCV vs. F29, PPM y borrador del F29, clasificación de compras por categoría | En curso |
 | 3. Banco | modCruce, modConciliacion | Lectura de cartolas (CSV, Excel, PDF), cruce banco–facturas con reglas por RUT, conciliación y partidas por identificar | Pendiente |
 | 4. Remuneraciones y honorarios | modRemuneraciones | Libros de remuneraciones, boletas de honorarios, aporte del empleador, apertura | Pendiente |
 | 5. Contabilidad | modContabilidad, modEstructura | Libro Diario automático, Mayor, Balance de 8 columnas, Estado de resultados, asientos manuales | Pendiente |
 | 6. Panel, controles y reportes | modReportes, modConstruir | Panel del mes, los 17 controles automáticos, exportar a Excel y PDF, respaldo del proyecto (guardar/abrir archivo) | Pendiente |
-| 7. Resumen del año (dashboard exportable) | — (nuevo) | Botón **Resumen del año**: tablero de cómo va la empresa en el año (ventas, compras, margen, IVA y F29, banco, cobranza, resultado y alertas), exportable a PDF, imagen y Excel. Se arma con lo que haya cargado y crece en cada etapa | Pendiente |
+| 7. Resumen del año (dashboard exportable) | — (nuevo) | Botón **Resumen del año**: tablero de cómo va la empresa en el año (ventas, compras, margen, IVA y F29, banco, cobranza, resultado y alertas), exportable a PDF y Excel. Primera versión hecha con el RCV (ventas, compras, IVA, clientes, proveedores y alertas); crece en cada etapa | En curso |
 
 ## Lector de documentos
 
