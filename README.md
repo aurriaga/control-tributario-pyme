@@ -16,7 +16,8 @@ de Excel con macros.
   del mes con el remanente anterior reajustado por UTM y el PPM.
 - Lee **cartolas** de distintos bancos y formatos, revisa que los saldos cuadren y **cruza cada movimiento con las
   facturas** que paga o cobra (RUT o nombre en la glosa y monto exacto); lo que no tiene factura se clasifica y la app
-  aprende la regla.
+  aprende la regla. Cada movimiento se puede clasificar con una clasificación del banco, directo a una cuenta del plan
+  (o a una cuenta nueva creada ahí mismo) o asociarlo a mano a una o varias facturas.
 - Lee los **libros de remuneraciones** y el **informe de boletas de honorarios** del SII: controla cada fila, calcula el
   aporte del empleador con el pago a PREVIRED y completa el impuesto único y la retención en el borrador del F29.
 - **Contabilidad automática**: arma el Libro Diario con todo lo cargado (ventas, compras, sueldos, honorarios, F29 y

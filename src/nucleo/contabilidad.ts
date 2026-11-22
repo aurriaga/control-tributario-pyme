@@ -95,6 +95,20 @@ export const CLASIFICACION_CUENTA: Record<string, number> = {
 
 export const ordenarPlan = (p: Cuenta[]) => [...p].sort((a, b) => a.codigo - b.codigo);
 
+/** Un movimiento del banco también se puede clasificar directo a una cuenta del plan: "Cuenta 1104: Fondos mutuos…". */
+export const etiquetaCuenta = (c: Pick<Cuenta, 'codigo' | 'nombre'>) => `Cuenta ${c.codigo}: ${c.nombre}`;
+export const codigoDeEtiqueta = (s: string) => Number(s.match(/^Cuenta (\d{3,6})\b/)?.[1] ?? 0);
+
+/** Código libre sugerido para una cuenta nueva del tipo indicado (el siguiente al mayor de su grupo). */
+export function codigoSugerido(plan: Cuenta[], tipo: TipoCuenta): number {
+  const base: Record<TipoCuenta, [number, number]> = { Activo: [1100, 1999], Pasivo: [2100, 2999], Patrimonio: [3100, 3999], Ingreso: [4100, 4999], Gasto: [5100, 5899] };
+  const [desde, hasta] = base[tipo];
+  const usados = new Set(plan.map(c => c.codigo));
+  let n = Math.max(desde, ...plan.filter(c => c.codigo >= desde && c.codigo <= hasta).map(c => c.codigo)) + 1;
+  while (usados.has(n) && n <= hasta) n++;
+  return n <= hasta ? n : 0;
+}
+
 /** Línea del Estado de Resultados de una cuenta de ingreso o gasto (la indicada en el plan, o por su código). */
 export function grupoDe(c: Cuenta | undefined, codigo: number): GrupoEERR | null {
   if (c?.grupo) return c.grupo;
@@ -288,7 +302,10 @@ export function generarAsientos(e: Entradas, cfg: ConfigContable): ResultadoAsie
     if (m.estado === 'conciliado' && m.docs?.length) {
       const d = porClave.get(m.docs[0]);
       contra = d ? (d.libro === 'VENTA' ? C.CLIENTES : C.PROVEEDORES) : 0;
-    } else if (m.estado === 'clasificado' && m.categoria) contra = cfg.clasificacion[m.categoria] ?? 0;
+    } else if (m.estado === 'clasificado' && m.categoria) {
+      const cod = codigoDeEtiqueta(m.categoria);
+      contra = cfg.clasificacion[m.categoria] ?? (plan.has(cod) ? cod : 0);
+    }
     if (!contra && mon < 0) {   // cargo sin registrar con el RUT de un proveedor o de un trabajador
       const ruts = rutsConDV(m.descripcion);
       if (ruts.some(r => provPorRut.has(r))) contra = C.PROVEEDORES;

@@ -193,6 +193,7 @@ export default function App() {
         {(libros.length > 0 || honorarios.length > 0) && <PanelPersonal libros={libros} honorarios={honorarios} movs={movs}
           onBorrar={() => { if (confirm('¿Borrar los libros de remuneraciones y los honorarios cargados?')) { setLibros([]); setHonorarios([]); } }} />}
         {movs.length > 0 && <PanelBanco movs={movs} docs={docs} f29s={f29s} reglas={reglas} libros={libros} rutEmpresa={empresa.rut}
+          plan={conta.plan} onNuevaCuenta={c => setConta(x => ({ ...x, plan: [...x.plan, c] }))}
           onCambio={(m, d, r) => { setMovs(m); if (d) setDocs(d); if (r) setReglas(r); }}
           onBorrar={() => { if (confirm('¿Borrar los movimientos del banco y las reglas? Las facturas marcadas como pagadas o cobradas vuelven a quedar pendientes.')) {
             setMovs([]); setReglas([]); setDocs(ds => ds.map(d => (d.fechaPago ? { ...d, estado: d.libro === 'VENTA' ? 'POR COBRAR' : 'POR PAGAR', fechaPago: undefined } : d))); } }} />}
@@ -225,7 +226,8 @@ function TablaDocs({ docs, onCambio }: { docs: Documento[]; onCambio: (d: Docume
   const [filtro, setFiltro] = useState(''), [anulando, setAnulando] = useState<string | null>(null), [motivo, setMotivo] = useState('');
   const vis = useMemo(() => {
     const t = filtro.trim().toLowerCase();
-    return (t ? docs.filter(d => `${d.razonSocial} ${d.rutContraparte} ${d.folio}`.toLowerCase().includes(t)) : docs).slice(0, 300);
+    const orden = [...docs].sort((a, b) => periodoDe(b).localeCompare(periodoDe(a)) || b.fechaEmision.localeCompare(a.fechaEmision) || a.libro.localeCompare(b.libro) || b.folio - a.folio);
+    return (t ? orden.filter(d => `${d.razonSocial} ${d.rutContraparte} ${d.folio}`.toLowerCase().includes(t)) : orden).slice(0, 300);
   }, [docs, filtro]);
   return (<>
     <input className="buscar" placeholder="Buscar por nombre, RUT o folio" value={filtro} onChange={e => setFiltro(e.target.value)} />

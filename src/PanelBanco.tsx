@@ -6,9 +6,11 @@ import { sugerirCruces, aplicarCruces, clasificar, crearRegla, CATEGORIAS, type 
 import { periodoLegible } from './nucleo/lector';
 import { pesos } from './formato';
 import { cuerposTrabajadores, type LibroRemuneraciones } from './nucleo/remuneraciones';
+import { etiquetaCuenta, codigoSugerido, ordenarPlan, type Cuenta, type TipoCuenta } from './nucleo/contabilidad';
 
 interface Props {
   movs: Movimiento[]; docs: Documento[]; f29s: F29[]; reglas: Regla[]; libros: LibroRemuneraciones[]; rutEmpresa: string;
+  plan: Cuenta[]; onNuevaCuenta: (c: Cuenta) => void;
   onCambio: (movs: Movimiento[], docs?: Documento[], reglas?: Regla[]) => void;
   onBorrar: () => void;
 }
@@ -16,7 +18,7 @@ const CLASE: Record<Confianza, string> = { Alta: 'verde', Media: 'anil', Baja: '
 const fechaCorta = (iso: string) => `${iso.slice(8, 10)}-${iso.slice(5, 7)}-${iso.slice(0, 4)}`;
 const montoMov = (m: Movimiento) => <span className={m.cargo ? 'neg' : 'pos'}>{pesos(m.abono - m.cargo)}</span>;
 
-export default function PanelBanco({ movs, docs, f29s, reglas, libros, rutEmpresa, onCambio, onBorrar }: Props) {
+export default function PanelBanco({ movs, docs, f29s, reglas, libros, rutEmpresa, plan, onNuevaCuenta, onCambio, onBorrar }: Props) {
   const [sugerencias, setSugerencias] = useState<Sugerencia[] | null>(null);
   const [decision, setDecision] = useState<Record<string, 'Aceptar' | 'Rechazar'>>({});
   const [verTodos, setVerTodos] = useState(false);
@@ -57,6 +59,16 @@ export default function PanelBanco({ movs, docs, f29s, reglas, libros, rutEmpres
     onCambio(recordar ? clasificar(marcados, nuevas) : marcados, undefined, recordar ? nuevas : undefined);
     if (sugerencias) setSugerencias(sugerencias.filter(s => s.movimiento !== m.clave));
   }
+
+  function conciliarMov(m: Movimiento, claves: string[]) {
+    const r = aplicarCruces([{ movimiento: m.clave, confianza: 'Alta', motivo: 'Conciliado a mano', docs: claves, contraparte: '' }], docs, movs);
+    onCambio(r.movs, r.docs);
+    if (sugerencias) setSugerencias(sugerencias.filter(x => x.movimiento !== m.clave));
+  }
+  const abiertos = useMemo(() => ({
+    abono: docs.filter(d => d.libro === 'VENTA' && d.estado === 'POR COBRAR'),
+    cargo: docs.filter(d => d.libro === 'COMPRA' && d.estado === 'POR PAGAR' && d.tipoDoc !== 40 && d.tipoDoc !== 43),
+  }), [docs]);
 
   const conSugerencia = new Set((sugerencias ?? []).filter(s => s.docs.length).map(s => s.movimiento));
   const porIdentificar = movs.filter(m => m.estado === 'pendiente' && !conSugerencia.has(m.clave)).sort((a, b) => b.fecha.localeCompare(a.fecha));
@@ -105,8 +117,9 @@ export default function PanelBanco({ movs, docs, f29s, reglas, libros, rutEmpres
 
       <details className="detalle">
         <summary>Por identificar ({porIdentificar.length})</summary>
-        <p className="vacio">Movimientos sin factura: clasifícalos. Si marcas "recordar", los movimientos con la misma glosa se clasifican solos.</p>
-        <ul className="por-identificar">{porIdentificar.slice(0, 60).map(m => <Clasificador key={m.clave} m={m} onClasificar={clasificarMov} />)}</ul>
+        <p className="vacio">Clasifica cada movimiento con una clasificación del banco o directo a una cuenta del plan (también puedes crear una cuenta nueva), o asócialo a mano a una o varias facturas. Si marcas "recordar", los movimientos con la misma glosa se clasifican solos.</p>
+        <ul className="por-identificar">{porIdentificar.slice(0, 60).map(m => <Clasificador key={m.clave} m={m} plan={plan} abiertos={m.abono > m.cargo ? abiertos.abono : abiertos.cargo}
+          onClasificar={clasificarMov} onConciliar={conciliarMov} onNuevaCuenta={onNuevaCuenta} />)}</ul>
         {porIdentificar.length > 60 && <p className="vacio">Se muestran 60 de {porIdentificar.length}.</p>}
       </details>
       {reglas.length > 0 && <p className="vacio">{reglas.length} regla{reglas.length > 1 ? 's' : ''} aprendida{reglas.length > 1 ? 's' : ''}.</p>}
@@ -115,16 +128,79 @@ export default function PanelBanco({ movs, docs, f29s, reglas, libros, rutEmpres
   );
 }
 
-function Clasificador({ m, onClasificar }: { m: Movimiento; onClasificar: (m: Movimiento, c: string, recordar: boolean) => void }) {
+const TIPOS: TipoCuenta[] = ['Activo', 'Pasivo', 'Patrimonio', 'Ingreso', 'Gasto'];
+const signoDoc = (d: Documento) => (d.tipoDoc === 60 || d.tipoDoc === 61 || d.tipoDoc === 112 ? -1 : 1);
+
+function Clasificador({ m, plan, abiertos, onClasificar, onConciliar, onNuevaCuenta }: {
+  m: Movimiento; plan: Cuenta[]; abiertos: Documento[];
+  onClasificar: (m: Movimiento, c: string, recordar: boolean) => void; onConciliar: (m: Movimiento, docs: string[]) => void; onNuevaCuenta: (c: Cuenta) => void;
+}) {
+  const [modo, setModo] = useState<'clasificar' | 'factura'>('clasificar');
   const [cat, setCat] = useState(''), [recordar, setRecordar] = useState(true);
+  const [nueva, setNueva] = useState<{ tipo: TipoCuenta; codigo: string; nombre: string } | null>(null);
+  const [buscar, setBuscar] = useState(''), [sel, setSel] = useState<string[]>([]);
+  const monto = Math.abs(m.abono - m.cargo);
+  const cuentas = useMemo(() => ordenarPlan(plan).filter(c => !c.transitoria), [plan]);
+  const candidatos = useMemo(() => {
+    const t = buscar.trim().toLowerCase().replace(/\./g, '');
+    return abiertos.filter(d => !t || `${d.razonSocial} ${d.rutContraparte.replace(/\./g, '')} ${d.folio} ${d.total}`.toLowerCase().includes(t))
+      .sort((a, b) => Math.abs(a.total - monto) - Math.abs(b.total - monto)).slice(0, 8);
+  }, [abiertos, buscar, monto]);
+  const elegidos = abiertos.filter(d => sel.includes(d.clave));
+  const suma = elegidos.reduce((s, d) => s + signoDoc(d) * d.total, 0);
+  const codigo = Number(nueva?.codigo ?? 0), repetido = plan.some(c => c.codigo === codigo);
+  const nuevaOk = !!nueva && codigo >= 1000 && codigo <= 9999 && !repetido && nueva.nombre.trim().length > 2;
+
+  function elegir(v: string) {
+    if (v === '__nueva') { const tipo: TipoCuenta = m.cargo ? 'Gasto' : 'Ingreso'; setNueva({ tipo, codigo: String(codigoSugerido(plan, tipo) || ''), nombre: '' }); setCat(''); }
+    else { setNueva(null); setCat(v); }
+  }
+  function crear() {
+    if (!nueva || !nuevaOk) return;
+    const c: Cuenta = { codigo, nombre: nueva.nombre.trim(), tipo: nueva.tipo };
+    onNuevaCuenta(c); onClasificar(m, etiquetaCuenta(c), recordar);
+  }
   return (
     <li>
       <div className="sug-mov"><b>{fechaCorta(m.fecha)}</b> {m.descripcion} <b>{montoMov(m)}</b></div>
-      <div className="clasificar">
-        <select value={cat} onChange={e => setCat(e.target.value)} aria-label="Clasificar como"><option value="">Clasificar como…</option>{CATEGORIAS.map(c => <option key={c}>{c}</option>)}</select>
-        <label><input type="checkbox" checked={recordar} onChange={e => setRecordar(e.target.checked)} /> Recordar para movimientos con esta glosa</label>
-        <button className="boton" disabled={!cat} onClick={() => onClasificar(m, cat, recordar)}>Guardar</button>
+      <div className="modos" role="group" aria-label="Cómo identificar el movimiento">
+        <button className={`enlace ${modo === 'clasificar' ? 'activo' : ''}`} onClick={() => setModo('clasificar')}>Clasificar</button>
+        <button className={`enlace ${modo === 'factura' ? 'activo' : ''}`} onClick={() => setModo('factura')}>Asociar a {m.abono > m.cargo ? 'facturas de venta' : 'facturas de compra'}</button>
       </div>
+      {modo === 'clasificar' ? (<>
+        <div className="clasificar">
+          <select value={nueva ? '__nueva' : cat} onChange={e => elegir(e.target.value)} aria-label="Clasificar como">
+            <option value="">Clasificar como…</option>
+            <optgroup label="Clasificaciones del banco">{CATEGORIAS.map(c => <option key={c}>{c}</option>)}</optgroup>
+            <optgroup label="Cuentas del plan">{cuentas.map(c => <option key={c.codigo} value={etiquetaCuenta(c)}>{c.codigo} {c.nombre}</option>)}</optgroup>
+            <option value="__nueva">＋ Crear una cuenta nueva…</option>
+          </select>
+          <label><input type="checkbox" checked={recordar} onChange={e => setRecordar(e.target.checked)} /> Recordar para movimientos con esta glosa</label>
+          {!nueva && <button className="boton" disabled={!cat} onClick={() => onClasificar(m, cat, recordar)}>Guardar</button>}
+        </div>
+        {nueva && (
+          <div className="nueva-cuenta">
+            <label>Tipo<select value={nueva.tipo} onChange={e => { const tipo = e.target.value as TipoCuenta; setNueva({ ...nueva, tipo, codigo: String(codigoSugerido(plan, tipo) || '') }); }}>
+              {TIPOS.map(t => <option key={t}>{t}</option>)}</select></label>
+            <label>Código<input className="corto" inputMode="numeric" value={nueva.codigo} onChange={e => setNueva({ ...nueva, codigo: e.target.value.replace(/\D/g, '').slice(0, 4) })} /></label>
+            <label className="ancho">Nombre de la cuenta<input value={nueva.nombre} onChange={e => setNueva({ ...nueva, nombre: e.target.value })} placeholder="Ej.: Arriendo de maquinaria" autoFocus /></label>
+            <button className="boton" disabled={!nuevaOk} onClick={crear}>Crear cuenta y guardar</button>
+            <button className="enlace" onClick={() => setNueva(null)}>Cancelar</button>
+            {repetido && <span className="aviso">El código {codigo} ya existe en el plan.</span>}
+          </div>)}
+      </>) : (
+        <div className="asociar">
+          <input className="buscar" value={buscar} onChange={e => setBuscar(e.target.value)} placeholder="Buscar por nombre, RUT, folio o monto" aria-label="Buscar facturas pendientes" />
+          {abiertos.length === 0 ? <p className="vacio">No hay facturas pendientes de este lado.</p> : (
+            <ul>{candidatos.map(d => (
+              <li key={d.clave}><label>
+                <input type="checkbox" checked={sel.includes(d.clave)} onChange={e => setSel(e.target.checked ? [...sel, d.clave] : sel.filter(x => x !== d.clave))} />
+                {' '}{signoDoc(d) < 0 ? 'NC' : 'Folio'} {d.folio} · {d.razonSocial} · {fechaCorta(d.fechaEmision)} · <b>{pesos(signoDoc(d) * d.total)}</b>
+              </label></li>))}</ul>)}
+          {elegidos.length > 0 && <p className={Math.abs(suma - monto) < 1 ? 'pos' : 'aviso'}>
+            {elegidos.length} documento{elegidos.length > 1 ? 's' : ''} suman {pesos(suma)}; el movimiento es {pesos(monto)}{Math.abs(suma - monto) < 1 ? ': calzan.' : ` (diferencia ${pesos(monto - suma)}).`}</p>}
+          <button className="boton" disabled={!sel.length} onClick={() => onConciliar(m, sel)}>Conciliar con {sel.length || ''} documento{sel.length === 1 ? '' : 's'}</button>
+        </div>)}
     </li>
   );
 }

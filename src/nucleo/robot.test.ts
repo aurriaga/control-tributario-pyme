@@ -73,3 +73,11 @@ describe('una corrida', () => {
     expect(sinPolitica.altasAceptadas).toBe(0);
   });
 });
+
+describe('aprender con cuentas del plan', () => {
+  it('acepta "Cuenta 2201: …" como clasificación y rechaza un código que no existe', () => {
+    const m = aprender(memoriaNueva(empresa), { tipo: 'movimiento', claves: ['x'], categoria: 'Cuenta 2201: Préstamos bancarios' });
+    expect(m.movimientos.x.categoria).toBe('Cuenta 2201: Préstamos bancarios');
+    expect(() => aprender(m, { tipo: 'movimiento', claves: ['y'], categoria: 'Cuenta 9999: No existe' })).toThrow(/ni una cuenta del plan/);
+  });
+});

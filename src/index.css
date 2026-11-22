@@ -259,3 +259,15 @@ tr.anulada td.estado-doc { text-decoration: none; }
 .pista-cascada .cero { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--grafito); opacity: .5; }
 @media (max-width: 720px) { .paso { grid-template-columns: 1fr auto; } .pista-cascada { grid-column: 1 / -1; grid-row: 2; } }
 @media print { .paso { break-inside: avoid; } .pista-cascada b { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+
+/* Conciliación manual del banco */
+.modos { display: flex; gap: 16px; margin-top: 8px; font-size: 14px; }
+.nueva-cuenta { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: end; margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: var(--hoja); font-size: 14px; }
+.nueva-cuenta label { display: grid; gap: 4px; color: var(--tenue); }
+.nueva-cuenta label.ancho { flex: 1 1 220px; }
+.nueva-cuenta input, .nueva-cuenta select { padding: 6px 10px; border-radius: 10px; border: 2px solid var(--linea); background: var(--papel); }
+.asociar { margin-top: 8px; font-size: 14px; }
+.asociar .buscar { margin: 4px 0 8px; }
+.asociar ul { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 4px; }
+.asociar li { padding: 4px 0; background: none; border: 0; }
+.asociar p { margin: 4px 0 8px; }

@@ -166,3 +166,16 @@ describe('con los archivos de prueba', () => {
     expect(r.controles.find(c => c.nombre === 'Compras sin categoría o por revisar')?.estado).toBe('Pendiente');
   });
 });
+
+describe('clasificar directo a una cuenta del plan', () => {
+  it('"Cuenta 1104: …" lleva el movimiento a esa cuenta y una cuenta nueva sugiere el siguiente código libre', async () => {
+    const { etiquetaCuenta, codigoDeEtiqueta, codigoSugerido, PLAN_BASE } = await import('./contabilidad');
+    const fondos = PLAN_BASE.find(c => c.codigo === 1104)!;
+    expect(codigoDeEtiqueta(etiquetaCuenta(fondos))).toBe(1104);
+    const m = mov('2026-07-31', 'RESCATE FONDO MUTUO', 300000, 2009000, { estado: 'clasificado', categoria: etiquetaCuenta(fondos) });
+    const r = contabilidad({ ...entradas, movs: [m] }, config());
+    expect(r.asientos.find(a => a.origen === 'Banco')!.lineas.find(l => l.codigo !== C.BANCO)!.codigo).toBe(1104);
+    expect(codigoSugerido(PLAN_BASE, 'Gasto')).toBe(5303);
+    expect(codigoSugerido([...PLAN_BASE, { codigo: 5303, nombre: 'Nueva', tipo: 'Gasto' }], 'Gasto')).toBe(5304);
+  });
+});

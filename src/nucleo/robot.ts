@@ -8,7 +8,7 @@ import type { LibroRemuneraciones, MesHonorarios } from './remuneraciones';
 import { normalizar } from './texto';
 import { calcularDV, formatearRUT, rutValido } from './rut';
 import { CATEGORIAS, rutsConDV, rutsEnTexto, sugerirCruces, type Sugerencia } from './cruce';
-import { configInicial, contabilidad, proveedoresSinCategoria, CLASIFICACION_CUENTA, PLAN_BASE, type Apertura, type ConfigContable, type Cuenta, type LineaManual } from './contabilidad';
+import { codigoDeEtiqueta, configInicial, contabilidad, proveedoresSinCategoria, CLASIFICACION_CUENTA, PLAN_BASE, type Apertura, type ConfigContable, type Cuenta, type LineaManual } from './contabilidad';
 import { observacionesDocumento } from './controles';
 
 // ------------------------------------------------------------------ memoria
@@ -163,13 +163,16 @@ export type Decision =
 /** Agrega una decisión a la memoria. Valida que la categoría exista; devuelve una memoria nueva (no modifica la recibida). */
 export function aprender(mem: MemoriaContable, d: Decision, fuente = 'usuario', hoy = new Date().toISOString().slice(0, 10)): MemoriaContable {
   const m: MemoriaContable = structuredClone(mem);
-  const catBanco = new Set<string>(CATEGORIAS), catGasto = new Set((m.plan ?? PLAN_BASE).map(c => c.categoria).filter(Boolean));
+  const plan = m.plan ?? PLAN_BASE;
+  const catGasto = new Set(plan.map(c => c.categoria).filter(Boolean));
+  // Clasificación del banco: una de la lista o una cuenta del plan escrita como "Cuenta 1104: <nombre>"
+  const catBanco = { has: (c: string) => (CATEGORIAS as readonly string[]).includes(c) || plan.some(x => x.codigo === codigoDeEtiqueta(c)) };
   const exigir = (ok: boolean, msg: string) => { if (!ok) throw new Error(msg); };
   let que = '';
   switch (d.tipo) {
     case 'regla': {
       const r = d.regla;
-      exigir(catBanco.has(r.categoria), `"${r.categoria}" no es una clasificación del banco. Usa una de: ${[...catBanco].join(', ')}.`);
+      exigir(catBanco.has(r.categoria), `"${r.categoria}" no es una clasificación del banco ni una cuenta del plan ("Cuenta 1104: ..."). Usa una de: ${CATEGORIAS.join(', ')}.`);
       exigir(r.tipo === 'glosa' || r.tipo === 'rut', 'El tipo de regla es "glosa" o "rut".');
       const patron = r.tipo === 'rut' ? formatearRUT(r.patron) : patronGlosa(r.patron);
       exigir(r.tipo === 'rut' ? rutValido(patron) : patron.length >= 6, r.tipo === 'rut' ? `El RUT ${r.patron} no es válido.` : 'El patrón de glosa es muy corto (mínimo 6 letras).');
@@ -179,7 +182,7 @@ export function aprender(mem: MemoriaContable, d: Decision, fuente = 'usuario', 
       que = `Regla R${String(n).padStart(3, '0')}: ${r.tipo} "${patron}" (${r.lado}) → ${r.categoria}`; break;
     }
     case 'movimiento':
-      exigir(catBanco.has(d.categoria), `"${d.categoria}" no es una clasificación del banco.`);
+      exigir(catBanco.has(d.categoria), `"${d.categoria}" no es una clasificación del banco ni una cuenta del plan ("Cuenta 1104: ...").`);
       exigir(d.claves.length > 0, 'Faltan los movimientos.');
       for (const k of d.claves) m.movimientos[k] = { categoria: d.categoria, nota: d.nota, fecha: hoy };
       que = `${d.claves.length} movimiento(s) → ${d.categoria}`; break;
