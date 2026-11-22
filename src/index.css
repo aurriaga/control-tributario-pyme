@@ -271,3 +271,20 @@ tr.anulada td.estado-doc { text-decoration: none; }
 .asociar ul { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 4px; }
 .asociar li { padding: 4px 0; background: none; border: 0; }
 .asociar p { margin: 4px 0 8px; }
+
+/* Recorrido guiado "¿Cómo funciona?" */
+.boton.ayuda { padding: 8px 16px; }
+#recorrido-marco { position: absolute; z-index: 30; border: 4px solid var(--ambar); border-radius: 14px; pointer-events: none;
+  box-shadow: 0 0 0 9999px rgba(10, 12, 20, .45); transition: left .35s cubic-bezier(.2, .8, .2, 1), top .35s cubic-bezier(.2, .8, .2, 1), width .35s, height .35s; }
+#recorrido-globo { position: fixed; z-index: 31; width: min(460px, calc(100vw - 32px)); background: var(--hoja); color: var(--grafito);
+  border-radius: 18px; padding: 20px 22px 16px; border-top: 8px solid var(--anil); box-shadow: 0 24px 60px -20px rgba(0, 0, 0, .6); }
+#recorrido-globo.centro { left: 50% !important; top: 50% !important; transform: translate(-50%, -50%); box-shadow: 0 0 0 9999px rgba(10, 12, 20, .45), 0 24px 60px -20px rgba(0, 0, 0, .6); }
+#recorrido-globo h3 { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+#recorrido-globo p { margin: 0 0 14px; }
+#recorrido-globo .pie { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+#recorrido-globo .cuenta { color: var(--tenue); font-size: 14px; margin-right: auto; }
+#recorrido-globo button { border: 0; border-radius: 999px; padding: 9px 18px; font-weight: 700; font-size: 15px; cursor: pointer; }
+#recorrido-globo .sig { background: var(--anil); color: #fff; }
+#recorrido-globo .ant { background: var(--anil-suave); color: var(--anil); }
+#recorrido-globo .salir { background: none; color: var(--tenue); text-decoration: underline; padding: 9px 6px; }
+@media print { #recorrido-marco, #recorrido-globo { display: none !important; } }

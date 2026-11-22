@@ -20,6 +20,7 @@ import PanelMes from './PanelMes';
 import { panelMes, mesesConDatos, crearRespaldo, leerRespaldo, CLAVES_RESPALDO } from './nucleo/panel';
 import { controlesGenerales, observacionesDocumento } from './nucleo/controles';
 import { descargarTodo } from './exportar';
+import { iniciarRecorrido } from './recorrido';
 
 // Todo se guarda solo en este navegador (localStorage). Nada se envía a un servidor.
 const CLAVE_EMPRESA = 'ctp.empresa', CLAVE_DOCS = 'ctp.documentos', CLAVE_F29 = 'ctp.f29', CLAVE_MOVS = 'ctp.movimientos', CLAVE_REGLAS = 'ctp.reglas', CLAVE_LIBROS = 'ctp.libros', CLAVE_HON = 'ctp.honorarios', CLAVE_CONTA = 'ctp.contabilidad', CLAVE_UTM = 'ctp.utm';
@@ -142,6 +143,7 @@ export default function App() {
           <button className="enlace" onClick={guardarRespaldo} title="Descarga un archivo con todo lo cargado, para guardarlo o llevarlo a otro computador">Guardar respaldo</button>
           <button className="enlace" onClick={() => respaldoRef.current?.click()}>Abrir respaldo</button>
           <input ref={respaldoRef} type="file" accept=".json,application/json" hidden onChange={e => { const f = e.target.files?.[0]; if (f) abrirRespaldo(f); e.target.value = ''; }} /></div>
+        <button className="boton secundario ayuda" onClick={iniciarRecorrido} title="Recorrido guiado por cada parte de la app">¿Cómo funciona?</button>
         <button className="boton resumen" onClick={() => setVerResumen(true)} disabled={!docs.length && !f29s.length && !movs.length && !libros.length}
           title={docs.length || f29s.length ? 'Ver cómo va la empresa en el año' : 'Carga documentos para ver el resumen'}>Resumen del año</button>
       </header>
