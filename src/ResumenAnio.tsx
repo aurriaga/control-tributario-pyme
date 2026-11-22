@@ -4,13 +4,14 @@ import type { Documento, Empresa } from './nucleo/rcv';
 import { aniosDisponibles, resumenAnual } from './nucleo/resumen';
 import { resumenF29, type F29 } from './nucleo/f29';
 import type { Movimiento } from './nucleo/cartola';
+import { resumenPersonal, librosFaltantes, type LibroRemuneraciones, type MesHonorarios } from './nucleo/remuneraciones';
 import { periodoLegible } from './nucleo/lector';
 import { pesos } from './formato';
 
 const MES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 const millones = (n: number) => (n < 0 ? '−' : '') + '$' + (Math.abs(n) / 1e6).toLocaleString('es-CL', { maximumFractionDigits: 1, minimumFractionDigits: 1 }) + ' M';
 
-export default function ResumenAnio({ docs, f29s, movs, empresa, onCerrar }: { docs: Documento[]; f29s: F29[]; movs: Movimiento[]; empresa: Empresa; onCerrar: () => void }) {
+export default function ResumenAnio({ docs, f29s, movs, libros, honorarios, empresa, onCerrar }: { docs: Documento[]; f29s: F29[]; movs: Movimiento[]; libros: LibroRemuneraciones[]; honorarios: MesHonorarios[]; empresa: Empresa; onCerrar: () => void }) {
   const anios = useMemo(() => [...new Set([...aniosDisponibles(docs), ...f29s.map(f => Number(f.periodo.slice(0, 4)))])].sort((a, b) => b - a), [docs, f29s]);
   const [anio, setAnio] = useState(anios[0] ?? new Date().getFullYear());
   const r = useMemo(() => resumenAnual(docs, anio), [docs, anio]);
@@ -23,12 +24,19 @@ export default function ResumenAnio({ docs, f29s, movs, empresa, onCerrar }: { d
     return { n: delAnio.length, saldo: delAnio.length ? delAnio[delAnio.length - 1].saldo : null, porCobrar, porPagar,
       sinIdentificar: sinIdentificar.length, montoSinIdentificar: sinIdentificar.reduce((a, m) => a + m.abono + m.cargo, 0), conBanco: movs.length > 0 };
   }, [movs, docs, anio]);
+  const personal = useMemo(() => {
+    const meses = resumenPersonal(libros, honorarios, movs).filter(m => m.periodo.startsWith(String(anio)));
+    const s = (k: 'haberes' | 'aporteEmpleador' | 'honorariosBruto') => meses.reduce((a, m) => a + (m[k] ?? 0), 0);
+    return { hay: meses.length > 0, remuneraciones: s('haberes'), aporte: s('aporteEmpleador'), honorarios: s('honorariosBruto'),
+      total: s('haberes') + s('aporteEmpleador') + s('honorariosBruto'), faltan: librosFaltantes(libros).filter(p => p.startsWith(String(anio))) };
+  }, [libros, honorarios, movs, anio]);
   const alertas = useMemo(() => [
+    ...(personal.faltan.length ? [{ nivel: 'falta' as const, texto: `Falta el libro de remuneraciones de ${personal.faltan.map(periodoLegible).join(', ')}.` }] : []),
     ...(banco.sinIdentificar ? [{ nivel: 'revisar' as const, texto: `${banco.sinIdentificar} movimientos del banco sin identificar (${pesos(banco.montoSinIdentificar)} entre cargos y abonos).` }] : []),
     ...rf.conDiferencias.map(p => ({ nivel: 'falta' as const, texto: `El F29 de ${periodoLegible(p)} no cuadra con el RCV: revisa la sección IVA y F29.` })),
     ...(rf.sinF29.length ? [{ nivel: 'revisar' as const, texto: `Sin F29 cargado: ${rf.sinF29.map(periodoLegible).join(', ')}.` }] : []),
     ...r.alertas,
-  ], [r, rf, banco]);
+  ], [r, rf, banco, personal]);
   const tope = Math.max(1, ...r.meses.map(m => Math.max(m.ventas, m.compras)));
 
   function descargarExcel() {
@@ -61,7 +69,8 @@ export default function ResumenAnio({ docs, f29s, movs, empresa, onCerrar }: { d
         <p className="veredicto">
           Vendiste <strong>{millones(r.ventas)}</strong> y compraste <strong>{millones(r.compras)}</strong> en neto.
           {r.margenPct !== null && <> Lo que queda después de las compras es <strong className={r.margen < 0 ? 'neg' : ''}>{millones(r.margen)}</strong>, un {Math.round(r.margenPct * 100)}% de las ventas.</>}
-          {' '}Aún no incluye sueldos, honorarios ni gastos sin factura.
+          {personal.hay ? <> Con el personal ({millones(personal.total)} entre sueldos, aporte del empleador y honorarios) queda <strong className={r.margen - personal.total < 0 ? 'neg' : ''}>{millones(r.margen - personal.total)}</strong>, antes de los gastos sin factura.</>
+            : <>{' '}Aún no incluye sueldos, honorarios ni gastos sin factura.</>}
         </p>
 
         <div className="cifras">
@@ -73,6 +82,7 @@ export default function ResumenAnio({ docs, f29s, movs, empresa, onCerrar }: { d
             <div><span>Pagado en F29</span><b>{pesos(rf.totalPagado)}</b><small>{rf.cargados} F29: IVA {pesos(rf.ivaPagado)} y PPM {pesos(rf.ppm)}</small></div>
             <div><span>F29 que cuadran con el RCV</span><b className={rf.conDiferencias.length ? 'neg' : ''}>{rf.cuadran} de {rf.cargados}</b></div>
           </>}
+          {personal.hay && <div><span>Costo del personal</span><b>{pesos(personal.total)}</b><small>sueldos {pesos(personal.remuneraciones)}, aporte {pesos(personal.aporte)} y honorarios {pesos(personal.honorarios)}</small></div>}
           {banco.conBanco && <>
             <div><span>Saldo en el banco</span><b>{banco.saldo === null ? '—' : pesos(banco.saldo)}</b><small>último movimiento cargado</small></div>
             <div><span>Por cobrar</span><b>{pesos(banco.porCobrar)}</b><small>facturas de venta sin cobro en el banco</small></div>

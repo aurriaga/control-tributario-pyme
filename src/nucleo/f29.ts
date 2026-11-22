@@ -120,7 +120,9 @@ export interface LineaBorrador { codigo: string; concepto: string; borrador: num
 export interface Borrador { periodo: string; lineas: LineaBorrador[]; vence: string; avisos: string[]; tasaPPM: number | null }
 
 /** Borrador del F29 de un período con lo cargado: IVA del RCV, remanente del mes anterior reajustado por UTM y PPM. */
-export function borradorF29(docs: Documento[], f29s: F29[], periodo: string, utm: Record<string, number>, tasaManual?: number): Borrador {
+/** personal: impuesto único del libro de remuneraciones (048) y retención de las boletas de honorarios (151) del mes. */
+export function borradorF29(docs: Documento[], f29s: F29[], periodo: string, utm: Record<string, number>, tasaManual?: number,
+  personal?: { impuestoUnico: number | null; retencionHonorarios: number | null }): Borrador {
   const porPer = f29PorPeriodo(f29s);
   const decl = porPer.get(periodo), ant = porPer.get(mesVecino(periodo, -1));
   const t = totalesRCV(docs, periodo);
@@ -144,9 +146,11 @@ export function borradorF29(docs: Documento[], f29s: F29[], periodo: string, utm
     { codigo: '077', concepto: 'Remanente para el mes siguiente', borrador: rem077, declarado: d('077') },
     { codigo: '563', concepto: 'Base del PPM (ventas netas del mes)', borrador: t.base, declarado: d('563') },
     { codigo: '062', concepto: `PPM${tasa !== null ? ` (tasa ${(tasa * 100).toLocaleString('es-CL', { maximumFractionDigits: 3 })}%)` : ''}`, borrador: ppm, declarado: d('062'), total: true },
-    { codigo: '151', concepto: 'Retención de honorarios', borrador: null, declarado: d('151'), nota: 'Se calculará con las boletas de honorarios (etapa de remuneraciones).' },
-    { codigo: '048', concepto: 'Impuesto único de trabajadores', borrador: null, declarado: d('048'), nota: 'Se calculará con el libro de remuneraciones (etapa de remuneraciones).' },
-    { codigo: '91', concepto: 'Total a pagar (estimado)', borrador: iva089 + ppm, declarado: d('91'), total: true },
+    { codigo: '151', concepto: 'Retención de honorarios', borrador: personal?.retencionHonorarios ?? null, declarado: d('151'),
+      nota: personal?.retencionHonorarios == null ? 'Carga el informe de boletas de honorarios recibidas del SII.' : undefined },
+    { codigo: '048', concepto: 'Impuesto único de trabajadores', borrador: personal?.impuestoUnico ?? null, declarado: d('048'),
+      nota: personal?.impuestoUnico == null ? 'Carga el libro de remuneraciones del mes.' : undefined },
+    { codigo: '91', concepto: 'Total a pagar (estimado)', borrador: iva089 + ppm + (personal?.retencionHonorarios ?? 0) + (personal?.impuestoUnico ?? 0), declarado: d('91'), total: true },
   ];
   const [y, m] = mesVecino(periodo, 1).split('-');
   return { periodo, lineas, vence: `20/${m}/${y}`, avisos, tasaPPM: tasa };

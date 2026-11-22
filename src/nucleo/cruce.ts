@@ -213,12 +213,15 @@ export function crearRegla(m: Movimiento, categoria: string, reglas: Regla[]): R
   return { id: `R${String(n).padStart(3, '0')}`, patron: patronDe(m.descripcion), categoria, lado: m.abono > m.cargo ? 'abono' : 'cargo' };
 }
 
-/** Clasifica los movimientos pendientes que calzan con una regla y los pagos de F29 detectados por el cruce. */
-export function clasificar(movs: Movimiento[], reglas: Regla[], pagosF29: string[] = []): Movimiento[] {
+/** Clasifica los movimientos pendientes: pagos de F29 detectados por el cruce, pagos al personal (cargos con el RUT de un
+ *  trabajador de los libros de remuneraciones o a PREVIRED) y los que calzan con una regla aprendida. */
+export function clasificar(movs: Movimiento[], reglas: Regla[], pagosF29: string[] = [], trabajadores: Set<string> = new Set()): Movimiento[] {
   const f29 = new Set(pagosF29);
   return movs.map(m => {
     if (m.estado !== 'pendiente') return m;
     if (f29.has(m.clave)) return { ...m, estado: 'clasificado' as const, categoria: 'Pago de impuestos (F29)', regla: 'F29' };
+    if (m.cargo > 0 && (/previred/i.test(m.descripcion) || rutsConDV(m.descripcion).some(c => trabajadores.has(c))))
+      return { ...m, estado: 'clasificado' as const, categoria: 'Remuneraciones y cotizaciones', regla: 'Personal' };
     const lado = m.abono > m.cargo ? 'abono' : 'cargo', p = patronDe(m.descripcion);
     const r = reglas.find(x => x.lado === lado && x.patron && p === x.patron);
     return r ? { ...m, estado: 'clasificado' as const, categoria: r.categoria, regla: r.id } : m;

@@ -4,6 +4,7 @@ import { clasificar, NOMBRE_TIPO, type Clasificacion, type TipoDoc } from './cla
 import { importarRCV, type Documento, type Empresa } from './rcv';
 import { leerF29, controlF29, type F29 } from './f29';
 import { leerCartola, type Movimiento } from './cartola';
+import { leerLibroRemuneraciones, leerHonorarios, type LibroRemuneraciones, type InformeHonorarios } from './remuneraciones';
 
 export type Estado = 'leido' | 'reconocido' | 'otra_empresa' | 'no_reconocido' | 'error';
 
@@ -18,12 +19,14 @@ export interface ResultadoLectura {
   documentos: Documento[];  // documentos del RCV leídos
   f29?: F29;                // formulario 29 leído
   movimientos?: Movimiento[];   // movimientos de una cartola
+  libro?: LibroRemuneraciones;  // libro de remuneraciones del mes
+  honorarios?: InformeHonorarios;
 }
 
 // En qué etapa del plan se agrega la lectura completa de cada tipo (mientras tanto se reconoce y se informa)
 const ETAPA: Partial<Record<TipoDoc, string>> = {
   F22: 'la etapa de contabilidad', CARPETA_TRIBUTARIA: 'la etapa de contabilidad',
-  REMUNERACIONES: 'la etapa de remuneraciones', HONORARIOS: 'la etapa de remuneraciones', LIBRO_DIARIO: 'la etapa de contabilidad',
+  LIBRO_DIARIO: 'la etapa de contabilidad',
   FACTURA: 'una próxima etapa', BOLETA: 'una próxima etapa',
 };
 
@@ -70,6 +73,22 @@ export async function leerArchivo(nombre: string, bytes: Uint8Array, ctx: Contex
     res.mensaje = (n === 0 ? 'Ningún documento nuevo' : n === 1 ? '1 documento cargado' : `${n} documentos cargados`)
       + (r.duplicados ? `, ${r.duplicados === 1 ? '1 repetido omitido' : r.duplicados + ' repetidos omitidos'}` : '')
       + (r.lineasInvalidas ? `, ${r.lineasInvalidas} líneas sin tipo, folio o fecha` : '') + '.';
+    return res;
+  }
+  if (cl.tipo === 'REMUNERACIONES') {
+    const r = leerLibroRemuneraciones(nombre, contenido);
+    if (!r.dato) { res.estado = 'error'; res.mensaje = r.mensaje; return res; }
+    res.estado = 'leido'; res.libro = r.dato; res.mensaje = r.mensaje;
+    res.titulo = `Libro de remuneraciones, ${periodoLegible(r.dato.periodo)}`;
+    const malas = r.dato.trabajadores.filter(t => t.control !== 'OK');
+    if (malas.length) res.avisos.push(...malas.slice(0, 3).map(t => `${t.nombre || t.rut}: ${t.control.replace('Revisar: ', '')}.`));
+    return res;
+  }
+  if (cl.tipo === 'HONORARIOS') {
+    const r = leerHonorarios(nombre, contenido);
+    if (!r.dato) { res.estado = 'error'; res.mensaje = r.mensaje; return res; }
+    res.estado = 'leido'; res.honorarios = r.dato; res.mensaje = r.mensaje;
+    res.titulo = `Boletas de honorarios recibidas, ${r.dato.anio}`;
     return res;
   }
   if (cl.tipo === 'CARTOLA') {

@@ -61,7 +61,9 @@ export async function extraer(nombre: string, bytes: Uint8Array, s: Servicios = 
   if (f === 'zip' || f === 'ole' || f === 'html') {
     try {
       const hojas = leerPlanilla(bytes);
-      return { formato: 'planilla', texto: hojasATexto(hojas), hojas, ocr: false };
+      // En el navegador el lector de HTML puede perder celdas del encabezado (año, RUT): se agrega el texto original
+      const extra = f === 'html' ? '\n' + decodificar(bytes).replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ') : '';
+      return { formato: 'planilla', texto: hojasATexto(hojas) + extra, hojas, ocr: false };
     } catch {
       if (f === 'html') { const t = decodificar(bytes).replace(/<[^>]+>/g, ' '); return { formato: 'texto', texto: t, hojas: [], ocr: false }; }
       return { formato: 'planilla', texto: '', hojas: [], ocr: false, aviso: 'No se pudo abrir la planilla (¿está protegida con contraseña o dañada?).' };

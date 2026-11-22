@@ -3,6 +3,7 @@ import type { Documento } from './nucleo/rcv';
 import { cuadratura, borradorF29, mesVecino, UTM_SII, type F29, type EstadoCuadratura } from './nucleo/f29';
 import { periodoLegible } from './nucleo/lector';
 import { pesos } from './formato';
+import type { LibroRemuneraciones, MesHonorarios } from './nucleo/remuneraciones';
 
 const CLASE: Record<EstadoCuadratura, string> = { Cuadra: 'verde', Diferencias: 'rojo', 'Falta F29': 'ambar', 'Falta RCV': 'ambar' };
 const CLAVE_UTM = 'ctp.utm', CLAVE_TASA = 'ctp.tasaPPM';
@@ -10,7 +11,7 @@ const leerLS = <T,>(k: string, d: T): T => { try { const v = localStorage.getIte
 const guardarLS = (k: string, v: unknown) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* sin almacenamiento */ } };
 const celda = (n: number | null) => (n === null ? '—' : pesos(n));
 
-export default function PanelIVA({ docs, f29s }: { docs: Documento[]; f29s: F29[] }) {
+export default function PanelIVA({ docs, f29s, libros, honorarios }: { docs: Documento[]; f29s: F29[]; libros: LibroRemuneraciones[]; honorarios: MesHonorarios[] }) {
   const filas = useMemo(() => cuadratura(docs, f29s), [docs, f29s]);
   const periodos = useMemo(() => filas.map(f => f.periodo).sort().reverse(), [filas]);
   const sugerido = filas.slice().reverse().find(f => f.estado === 'Falta F29')?.periodo ?? periodos[0] ?? '';
@@ -19,7 +20,13 @@ export default function PanelIVA({ docs, f29s }: { docs: Documento[]; f29s: F29[
   const [tasaTxt, setTasaTxt] = useState<string>(() => leerLS<string>(CLAVE_TASA, ''));
   const tasaManual = tasaTxt.trim() ? Number(tasaTxt.replace(',', '.')) / 100 : undefined;
   const per = periodo && periodos.includes(periodo) ? periodo : sugerido;
-  const b = useMemo(() => (per ? borradorF29(docs, f29s, per, utm, tasaManual) : null), [docs, f29s, per, utm, tasaManual]);
+  const personal = useMemo(() => {
+    const l = libros.find(x => x.periodo === per);
+    const conInforme = honorarios.some(h => h.periodo.slice(0, 4) === per.slice(0, 4));
+    return { impuestoUnico: l ? l.trabajadores.reduce((a, t) => a + t.impuestoUnico, 0) : null,
+      retencionHonorarios: conInforme ? honorarios.find(h => h.periodo === per)?.retencionTerceros ?? 0 : null };
+  }, [libros, honorarios, per]);
+  const b = useMemo(() => (per ? borradorF29(docs, f29s, per, utm, tasaManual, personal) : null), [docs, f29s, per, utm, tasaManual, personal]);
   const cuadran = filas.filter(f => f.estado === 'Cuadra').length, conF29 = filas.filter(f => f.debitoF29 !== null).length;
 
   function cambiarUTM(p: string, v: string) {
@@ -67,7 +74,7 @@ export default function PanelIVA({ docs, f29s }: { docs: Documento[]; f29s: F29[
             <label>Tasa del PPM (%)<input inputMode="decimal" value={tasaTxt} onChange={e => { setTasaTxt(e.target.value); guardarLS(CLAVE_TASA, e.target.value); }}
               placeholder={b.tasaPPM !== null ? `${(b.tasaPPM * 100).toLocaleString('es-CL')} (del último F29)` : 'ej. 1'} /></label>
           </div>
-          <p className="nota-borrador">Es una estimación con los documentos cargados; la cifra final es la que declares en el SII. Faltan la retención de honorarios y el impuesto único, que llegan con la etapa de remuneraciones.</p>
+          <p className="nota-borrador">Es una estimación con los documentos cargados; la cifra final es la que declares en el SII. La retención de honorarios sale del informe de boletas recibidas y el impuesto único del libro de remuneraciones del mes.</p>
         </div>
       )}
     </section>
