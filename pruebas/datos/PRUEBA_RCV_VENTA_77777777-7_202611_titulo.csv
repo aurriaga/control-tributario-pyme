@@ -1,0 +1,3 @@
+Registro de Ventas - Detalle;;;;
+Nro;Tipo Doc;Tipo Venta;Rut cliente;Razon Social;Folio;Fecha Docto;Fecha Recepcion;Fecha Acuse Recibo;Fecha Reclamo;Monto Exento;Monto Neto;Monto IVA;Monto total;IVA Retenido Total;IVA Retenido Parcial
+1;33;Del Giro;78000001-5;CLIENTE PRUEBA UNO SPA;9201;06/11/2026;06/11/2026 11:00:00;;;0;200000;38000;238000;;

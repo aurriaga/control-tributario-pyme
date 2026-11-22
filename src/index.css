@@ -1,0 +1,29 @@
+:root {
+  --tinta: #1b2838; --gris: #5c6068; --fondo: #f0ebe2; --tarjeta: #fbf8f3; --terra: #c4502c; --linea: #e3d9c9; --error: #9c0006;
+  font-family: 'Segoe UI', system-ui, sans-serif; color: var(--tinta); background: var(--fondo);
+}
+@media (prefers-color-scheme: dark) {
+  :root { --tinta: #ece6da; --gris: #b3aea5; --fondo: #14181f; --tarjeta: #1d2430; --linea: #2c3442; --error: #ff8a80; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--fondo); }
+main { max-width: 1200px; margin: 0 auto; padding: 32px 16px 64px; }
+header h1 { font-family: 'Century Gothic', 'Segoe UI', sans-serif; font-size: clamp(28px, 5vw, 44px); margin: 4px 0 6px; }
+.kicker { font-family: Consolas, monospace; letter-spacing: .3em; color: var(--terra); font-size: 13px; margin: 0; }
+.nota { color: var(--gris); font-size: 14px; }
+.tarjeta { background: var(--tarjeta); border: 1px solid var(--linea); border-radius: 6px; padding: 18px 20px; margin: 16px 0; overflow-x: auto; }
+h2 { font-family: 'Century Gothic', 'Segoe UI', sans-serif; font-size: 20px; margin: 0 0 8px; }
+.fila { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.fila.izq { justify-content: flex-start; }
+input { font: inherit; padding: 8px 10px; border: 1px solid var(--linea); border-radius: 4px; background: var(--fondo); color: var(--tinta); }
+input.buscar { min-width: 260px; }
+button { font: inherit; background: var(--tinta); color: var(--fondo); border: 0; border-radius: 4px; padding: 8px 14px; cursor: pointer; }
+button:disabled { opacity: .4; cursor: default; }
+button.secundario { background: transparent; color: var(--terra); border: 1px solid var(--terra); }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th { text-align: left; background: var(--tinta); color: var(--fondo); padding: 6px 8px; font-weight: 600; white-space: nowrap; }
+td { padding: 5px 8px; border-bottom: 1px solid var(--linea); vertical-align: top; }
+td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.obs { color: var(--gris); font-size: 12px; max-width: 280px; }
+.mensajes { font-size: 14px; padding-left: 18px; }
+.error { color: var(--error); }
