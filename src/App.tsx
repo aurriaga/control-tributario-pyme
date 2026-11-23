@@ -293,7 +293,7 @@ export default function App() {
         mes={meses.length ? calcularMes(meses.find(m => docs.some(d => d.estado !== 'ANULADA' && periodoDe(d) === m)) ?? meses[0]) : null}
         onIr={(v, pestana) => { ir(v); if (pestana) setTimeout(() => dispatchEvent(new CustomEvent('ctp:pestana', { detail: pestana })), 120); }}
         onArreglar={c => { if (c.docs) setDocs(c.docs); if (c.movs) setMovs(c.movs); if (c.libros) setLibros(c.libros); if (c.cfg) setConta(c.cfg); }}
-        onRecorrido={iniciarRecorrido} />
+        onRecorrido={iniciarRecorrido} onAgregarAsiento={lineas => setConta(c => ({ ...c, manuales: [...c.manuales, ...lineas] }))} />
 
       {verResumen && <ResumenAnio docs={docs} f29s={f29s} movs={movs} libros={libros} honorarios={honorarios} empresa={empresa} cfg={conta} controles={controles} onCerrar={() => setVerResumen(false)} />}
     </div>

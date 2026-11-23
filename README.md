@@ -37,9 +37,13 @@ ofrece cargarlo en esa. Los datos se guardan en IndexedDB del navegador (alcanza
   nombre o por proveedores parecidos ya clasificados, y qué es cada movimiento del banco por su glosa o su RUT.
 - **Reglas** que se aprenden al clasificar: por glosa igual, por glosa que contiene unas palabras o por RUT; se pueden
   editar, desactivar o borrar en Banco > Reglas aprendidas.
-- **Asistente** (botón abajo a la derecha): responde "¿cómo hago…?" con la ayuda de la app, dice qué falta en el mes y
+- **Riffo Junior, asistente contable** (botón abajo a la derecha): arma **asientos** a partir de una frase ("compré un
+  notebook en 800.000 neto con transferencia"), con el cálculo del IVA, la glosa, el criterio y los supuestos, y los agrega
+  como asiento manual con tu confirmación; dice qué cambió en la **normativa**; responde "¿cómo hago…?" con la ayuda de la app, dice qué falta en el mes y
   revisa la empresa (17 controles e integridad de los datos: repetidos, cruces rotos, reglas borradas, pagos sin respaldo,
   apertura faltante); lo que se puede corregir solo tiene un botón y pide confirmación. No usa servicios externos.
+- **Normativa actualizada**: `public/normativa.json` (UTM, IVA, retención de honorarios, PPM mínimo, vidas útiles y
+  novedades) se actualiza solo cada mes con la UTM publicada en sii.cl (GitHub Actions, `robot/actualizar-normativa.ts`).
 - **¿Cómo funciona?**: un recorrido guiado que marca cada parte de la pantalla y la explica en palabras simples.
 - **Resumen del año**: ventas, compras, IVA, mes a mes, principales clientes y proveedores, el resultado contable en
   cascada (de las ventas al resultado) y alertas; se descarga en PDF o Excel.

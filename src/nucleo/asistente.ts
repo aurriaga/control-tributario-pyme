@@ -7,6 +7,8 @@ import type { LibroRemuneraciones, MesHonorarios } from './remuneraciones';
 import { aperturaSugerida, type ConfigContable, type Control } from './contabilidad';
 import { reaplicarReglas, type Regla } from './cruce';
 import { texto } from './sugerir';
+import { montoDe } from './asientosAyuda';
+import { normativa, retencionHonorarios, ppmMinimo } from './normativa';
 
 export type Vista = 'inicio' | 'cargar' | 'clasificar' | 'documentos' | 'iva' | 'personal' | 'banco' | 'contabilidad';
 export type Accion =
@@ -121,18 +123,36 @@ export function aplicarArreglo(a: Arreglo, d: Datos): Partial<Pick<Datos, 'docs'
 
 // ------------------------------------------------------------------ conversación
 export const SALUDO: Respuesta = {
-  texto: 'Hola, soy el asistente de la app. Puedo explicarte cómo hacer algo, decirte qué falta este mes o revisar tu empresa para encontrar errores y ayudarte a corregirlos. Todo queda en tu navegador: no envío tus datos a ninguna parte.',
+  texto: 'Hola, soy Riffo Junior, tu asistente contable. Te explico cómo hacer las cosas en la app, te digo qué falta este mes, reviso tu empresa para encontrar errores y te ayudo a armar asientos (cuéntame la operación, por ejemplo: "compré un notebook en 800.000 neto con transferencia"). Uso la normativa vigente que la app actualiza desde el SII. Todo queda en tu navegador: no envío tus datos a ninguna parte.',
   acciones: [],
 };
 
 /** Responde una pregunta. Las órdenes "revisar" y "qué falta" se resuelven en la pantalla (necesitan los datos). */
-export function intencion(pregunta: string): 'revisar' | 'falta' | 'ayuda' {
+export function intencion(pregunta: string): 'asiento' | 'normativa' | 'revisar' | 'falta' | 'ayuda' {
   const t = texto(pregunta);
+  if (/\b(asiento|contabiliz\w*|registr\w*|deprecia\w*|vend\w*|venta|compr\w*|pague|gaste|aporte|retir\w*|prestamo|honorarios?|arriendo)\b/.test(t) && (montoDe(pregunta) !== null || /\bdeprecia/.test(t)) && !/\bcomo (cargo|hago|se)\b/.test(t)) return 'asiento';
+  if (/\b(normativa|ley(es)?|tasa|tasas|utm|novedad\w*|cambio\w* tributari\w*|sii)\b/.test(t) && !/\bcomo (cargo|hago)\b/.test(t)) return 'normativa';
   if (/\b(revis\w*|error(es)?|problema\w*|mal|arregl\w*|corregi\w*|falla\w*|diagnost\w*)\b/.test(t)) return 'revisar';
   if (/\b(falta\w*|pendiente\w*|mes)\b/.test(t) && !/\bcomo\b/.test(t)) return 'falta';
   return 'ayuda';
 }
+/** Lo que dice la normativa vigente que usa la app (y de cuándo es). */
+export function respuestaNormativa(hoy = new Date()): Respuesta {
+  const n = normativa(), anio = hoy.getFullYear();
+  const utms = Object.entries(n.utm).sort(), [mesU, valU] = utms[utms.length - 1] ?? ['', 0];
+  const pct = (x: number) => `${(x * 100).toLocaleString('es-CL', { maximumFractionDigits: 3 })}%`;
+  const lineas = [
+    `Normativa actualizada al ${n.actualizado.split('-').reverse().join('-')} (${n.fuente}).`,
+    mesU ? `• Última UTM publicada: ${mesU} = $${valU.toLocaleString('de-DE')}.` : '',
+    `• IVA: ${pct(n.iva)}. Retención de honorarios ${anio}: ${pct(retencionHonorarios(anio))} (${anio + 1}: ${pct(retencionHonorarios(anio + 1))}).`,
+    `• PPM mínimo Pro Pyme ${anio}: ${pct(ppmMinimo(anio))}.`,
+    ...n.novedades.slice(0, 5).map(x => `• ${x.fecha.split('-').reverse().join('-')} · ${x.titulo}: ${x.detalle} (${x.fuente})`),
+    'La UTM se actualiza sola cada mes desde sii.cl. Para un cambio de ley, revisa siempre la fuente oficial.',
+  ].filter(Boolean);
+  return { texto: lineas.join('\n'), acciones: [] };
+}
+
 export const NO_ENTENDI: Respuesta = {
-  texto: 'No encontré ayuda para eso. Prueba con palabras como "cartola", "F29", "regla", "anular", "apertura", "respaldo" o "empresa", o pídeme "revisa mi empresa".',
+  texto: 'No encontré ayuda para eso. Prueba con palabras como "cartola", "F29", "regla", "anular", "apertura", "respaldo" o "empresa"; pídeme "revisa mi empresa", o cuéntame una operación con su monto para armar el asiento.',
   acciones: [{ tipo: 'recorrido', etiqueta: 'Ver el recorrido de la app' }],
 };

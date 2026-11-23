@@ -1,0 +1,32 @@
+name: Actualizar normativa (UTM del SII)
+
+on:
+  schedule:
+    - cron: '0 12 2 * *'      # el día 2 de cada mes, cuando el SII ya publicó la UTM
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  actualizar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx vite-node robot/actualizar-normativa.ts
+      - name: Guardar y publicar si cambió
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet public/normativa.json; then echo 'Sin cambios'; exit 0; fi
+          git config user.name 'actualizador-normativa'
+          git config user.email 'actions@users.noreply.github.com'
+          git commit -am 'Normativa: UTM del SII'
+          git push
+          gh workflow run pages.yml --ref main
