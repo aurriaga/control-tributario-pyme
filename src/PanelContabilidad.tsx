@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import * as XLSX from 'xlsx';
 import type { Documento } from './nucleo/rcv';
 import type { Movimiento } from './nucleo/cartola';
@@ -27,6 +27,10 @@ const vacio = (n: number) => (n ? pesos(n) : '');
 
 export default function PanelContabilidad({ empresa, docs, f29s, movs, libros, honorarios, cfg, onCfg, controles }: Props) {
   const [pestana, setPestana] = useState<Pestana>('revision');
+  useEffect(() => {      // el asistente puede abrir una pestaña por su nombre ("Plan de cuentas")
+    const f = (e: Event) => { const p = PESTANAS.find(([, t]) => t === (e as CustomEvent<string>).detail); if (p) setPestana(p[0]); };
+    addEventListener('ctp:pestana', f); return () => removeEventListener('ctp:pestana', f);
+  }, []);
   const r = useMemo(() => contabilidad({ empresa, docs, f29s, movs, libros, honorarios }, cfg), [empresa, docs, f29s, movs, libros, honorarios, cfg]);
   const meses = useMemo(() => [...new Set(r.diario.map(f => f.mes))].sort(), [r.diario]);
   const ultimo = meses[meses.length - 1] ?? '';

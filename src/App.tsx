@@ -23,6 +23,7 @@ import { descargarTodo } from './exportar';
 import { iniciarRecorrido } from './recorrido';
 import { ls, migrar, empresaActiva, empresas as listaEmpresas, claveDe, agregarEmpresa, activar, quitarEmpresa, datosDeEmpresa, importarRespaldo, clavesDocs, agregarLectura } from './almacen';
 import PorClasificar from './PorClasificar';
+import Asistente from './Asistente';
 import { contarPorClasificar } from './nucleo/porClasificar';
 import Icono, { type NombreIcono } from './Icono';
 
@@ -287,6 +288,12 @@ export default function App() {
         {vista === 'contabilidad' && (docs.length > 0 || movs.length > 0 ? <PanelContabilidad empresa={empresa.rut} docs={docs} f29s={f29s} movs={movs} libros={libros} honorarios={honorarios}
           cfg={conta} onCfg={setConta} controles={controles} /> : sinDatos('La contabilidad se arma sola cuando cargas documentos.'))}
       </main>
+
+      <Asistente datos={{ empresa, docs, f29s, movs, reglas, libros, honorarios, cfg: conta }} controles={controles} porClasificar={pendientes?.total ?? 0}
+        mes={meses.length ? calcularMes(meses.find(m => docs.some(d => d.estado !== 'ANULADA' && periodoDe(d) === m)) ?? meses[0]) : null}
+        onIr={(v, pestana) => { ir(v); if (pestana) setTimeout(() => dispatchEvent(new CustomEvent('ctp:pestana', { detail: pestana })), 120); }}
+        onArreglar={c => { if (c.docs) setDocs(c.docs); if (c.movs) setMovs(c.movs); if (c.libros) setLibros(c.libros); if (c.cfg) setConta(c.cfg); }}
+        onRecorrido={iniciarRecorrido} />
 
       {verResumen && <ResumenAnio docs={docs} f29s={f29s} movs={movs} libros={libros} honorarios={honorarios} empresa={empresa} cfg={conta} controles={controles} onCerrar={() => setVerResumen(false)} />}
     </div>

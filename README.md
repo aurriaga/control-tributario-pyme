@@ -37,6 +37,9 @@ ofrece cargarlo en esa. Los datos se guardan en IndexedDB del navegador (alcanza
   nombre o por proveedores parecidos ya clasificados, y qué es cada movimiento del banco por su glosa o su RUT.
 - **Reglas** que se aprenden al clasificar: por glosa igual, por glosa que contiene unas palabras o por RUT; se pueden
   editar, desactivar o borrar en Banco > Reglas aprendidas.
+- **Asistente** (botón abajo a la derecha): responde "¿cómo hago…?" con la ayuda de la app, dice qué falta en el mes y
+  revisa la empresa (17 controles e integridad de los datos: repetidos, cruces rotos, reglas borradas, pagos sin respaldo,
+  apertura faltante); lo que se puede corregir solo tiene un botón y pide confirmación. No usa servicios externos.
 - **¿Cómo funciona?**: un recorrido guiado que marca cada parte de la pantalla y la explica en palabras simples.
 - **Resumen del año**: ventas, compras, IVA, mes a mes, principales clientes y proveedores, el resultado contable en
   cascada (de las ventas al resultado) y alertas; se descarga en PDF o Excel.

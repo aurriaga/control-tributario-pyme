@@ -34,7 +34,7 @@ que se abre desde GitHub Pages y procesa los archivos **en el navegador**: nada 
    - Selector de empresa arriba del menú lateral; "Agregar empresa" (3 o 4 o más), cada una con su plan, reglas, memoria y respaldo.
    - El lector reconoce el RUT de cada archivo: si es de otra empresa registrada, ofrece cargarlo en esa en vez de rechazarlo.
    - Pasar el almacenamiento a IndexedDB (varias empresas superan los ~5 MB de localStorage) y respaldo por empresa o de todas.
-2. **Asistente (chatbot) dentro de la app**: guía, responde "¿cómo hago…?" y revisa errores.
+2. **Asistente (chatbot) dentro de la app** (primera versión hecha el 23-11, sin servicios externos: ayuda por temas, qué falta en el mes, revisión con los 17 controles e integridad, y arreglos con confirmación): guía, responde "¿cómo hago…?" y revisa errores.
    - Primera versión sin servicios externos (la app es pública y no debe exponer datos): responde con la ayuda de la propia app
      (recorrido, textos de cada sección) y con los 17 controles, el lector y las reglas.
    - Detecta errores y propone el arreglo con un botón (por ejemplo: RUT de la empresa que no coincide con los RCV, UTM faltante,
