@@ -2,7 +2,7 @@
 // Usa las tasas de normativa.ts, cita la fuente y dice qué supuso. Si la pregunta se puede leer de dos formas (por ejemplo,
 // "30 millones de crédito"), muestra ambas. Es una estimación: no reemplaza la revisión del contador.
 import { montoDe } from './asientosAyuda';
-import { texto as normal } from './sugerir';
+import { jerga } from './vocabulario';
 import { normativa, tasaIDPC, factorCredito, retencionHonorarios, ppmMinimo } from './normativa';
 import type { Respuesta } from './asistente';
 
@@ -25,20 +25,23 @@ export function anioComercial(t: string, hoy: Date): { anio: number; supuesto?: 
   return { anio: hoy.getFullYear(), supuesto: `Usé el año comercial ${hoy.getFullYear()} (se declara en abril de ${hoy.getFullYear() + 1}).` };
 }
 
+// Cálculo de IVA dicho de varias formas: "IVA de", "sácale el IVA a", "agrégale el IVA", "neto de", "más IVA"
+const PIDE_IVA = /\b(iva (de|a|para|sobre)|cuanto (es el |de |seria el |sale el )?iva|calcul\w* (el )?iva|(saca|sacale|sacar|quita|quitale|quitar|descuenta|descontar|agrega|agregale|agregar|suma|sumale|sumar)( le)? (el )?iva|neto de|bruto de|mas iva)\b/;
+
 export function esTributaria(pregunta: string): boolean {
-  const t = normal(pregunta);
-  return /\b(primera categoria|idpc|impuesto (a la renta|de primera)|global complementario|credito (por|de) (idpc|primera)|cuanto (pago|pagaria|pagare|tengo que pagar)|impuesto que (pago|pagaria)|retencion de (la )?(boleta|honorarios)|cuanto (es el|de) iva|iva de|ppm de|tasa de (primera|ppm|iva|retencion))\b/.test(t);
+  const t = jerga(pregunta);
+  return PIDE_IVA.test(t) || /\b(primera categoria|idpc|impuesto (a la renta|de primera)|global complementario|credito (por|de) (idpc|primera)|cuanto (pago|pagaria|pagare|tengo que pagar|me toca pagar|me sale|sale)|impuesto que (pago|pagaria)|retencion de (la )?(boleta|honorarios)|retencion (de|a) (una )?boleta de honorarios|ppm de|tasa de (primera|ppm|iva|retencion))\b/.test(t);
 }
 
 export function responderTributaria(pregunta: string, hoy = new Date()): Respuesta | null {
-  const t = normal(pregunta), monto = montoDe(pregunta);
+  const t = jerga(pregunta), monto = montoDe(pregunta);
   const { anio, supuesto } = anioComercial(t, hoy);
   const supuestos = supuesto ? [supuesto] : [];
   const fuente = (f: string) => `Fuente: ${f}. Es una estimación con la normativa cargada en la app (actualizada al ${normativa().actualizado.split('-').reverse().join('-')}); confírmala antes de declarar.`;
 
   // IVA
-  if (/\b(iva de|cuanto (es el|de) iva|calcula(r)? (el )?iva)\b/.test(t) && monto) {
-    const tasa = normativa().iva, bruto = /\b(con iva|bruto|total|iva incluido)\b/.test(t);
+  if (PIDE_IVA.test(t) && monto) {
+    const tasa = normativa().iva, bruto = /\b(con iva|bruto|total|iva incluido|neto de|(saca|sacale|sacar|quita|quitale|quitar|descuenta|descontar)( le)? (el )?iva)\b/.test(t) && !/\b(mas iva|(agrega|agregale|agregar|suma|sumale|sumar)( le)? (el )?iva)\b/.test(t);
     const neto = bruto ? Math.round(monto / (1 + tasa)) : monto, iva = bruto ? monto - neto : Math.round(monto * tasa);
     return { texto: `${bruto ? `De ${$(monto)} con IVA incluido` : `Sobre un neto de ${$(monto)}`}: neto ${$(neto)}, IVA ${pct(tasa)} = ${$(iva)}, total ${$(neto + iva)}.\n${bruto ? '' : 'Si el monto ya incluía el IVA, dime "con IVA". '}${fuente('DL 825, art. 14')}`, acciones: [] };
   }

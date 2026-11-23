@@ -18,10 +18,14 @@ const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', '
 export function montoDe(t: string): number | null {
   const s = t.toLowerCase();
   const cand: number[] = [];
-  for (const m of s.matchAll(/(\d+(?:[.,]\d+)?)\s*(millones|millon|mm|mil|m\b)/g)) {
-    const n = Number(m[1].replace(',', '.')); cand.push(m[2] === 'mil' ? n * 1000 : n * 1_000_000);
+  // Con palabra: "1,5 millones", "500 mil", "30 palos" (millones), "119 lucas" (miles), "20k", "5 gambas" (cientos)
+  const FACTOR: Record<string, number> = { millones: 1e6, millon: 1e6, mm: 1e6, m: 1e6, palos: 1e6, palo: 1e6, mil: 1e3, lucas: 1e3, luca: 1e3, k: 1e3, gambas: 100, gamba: 100 };
+  for (const m of s.matchAll(/(\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d+(?:[.,]\d{1,2})?)\s*(millones|millon|mm|mil|palos?|lucas?|gambas?|m\b|k\b)/g)) {
+    const n = Number(/\.\d{3}/.test(m[1]) ? m[1].replace(/\./g, '').replace(',', '.') : m[1].replace(',', '.'));
+    cand.push(n * FACTOR[m[2]]);
   }
-  for (const m of s.matchAll(/\$?\s*(\d{1,3}(?:\.\d{3})+|\d{4,})(?![\d.,]*\s*(?:millones|millon|mil)\b)/g)) cand.push(Number(m[1].replace(/\./g, '')));
+  for (const m of s.matchAll(/\b(?:un|una) (palo|luca|millon)\b/g)) cand.push(FACTOR[m[1]]);
+  for (const m of s.matchAll(/\$?\s*(\d{1,3}(?:\.\d{3})+|\d{4,})(?![\d.,]*\s*(?:millones|millon|mil|palos?|lucas?|gambas?|k\b)\b)/g)) cand.push(Number(m[1].replace(/\./g, '')));
   const validos = cand.filter(n => n >= 100 && !(n >= 1990 && n <= 2100 && Number.isInteger(n) && cand.length > 1));
   return validos.length ? Math.round(Math.max(...validos)) : null;
 }

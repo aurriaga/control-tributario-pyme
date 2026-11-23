@@ -6,10 +6,10 @@ import type { F29 } from './f29';
 import type { LibroRemuneraciones, MesHonorarios } from './remuneraciones';
 import { aperturaSugerida, type ConfigContable, type Control } from './contabilidad';
 import { reaplicarReglas, type Regla } from './cruce';
-import { texto } from './sugerir';
 import { montoDe } from './asientosAyuda';
 import { esTributaria } from './tributario';
 import { normativa, retencionHonorarios, ppmMinimo } from './normativa';
+import { jerga, pideDefinicion, esTerminoSuelto } from './vocabulario';
 
 export type Vista = 'inicio' | 'cargar' | 'clasificar' | 'documentos' | 'iva' | 'personal' | 'banco' | 'contabilidad' | 'noticias';
 export type Accion =
@@ -47,7 +47,7 @@ const TEMAS: Tema[] = [
 ];
 
 const STOP = new Set('como hago puedo para que donde esta los las el la un una de del en y o a se me mi mis por con hay es son lo al cuando quiero necesito ver'.split(' '));
-const tokens = (s: string) => texto(s).trim().split(' ').filter(w => w.length > 2 && !STOP.has(w));
+const tokens = (s: string) => jerga(s).trim().split(' ').filter(w => w.length > 2 && !STOP.has(w));
 
 /** Busca el tema de ayuda que mejor calza con la pregunta (palabras en común, con prefijos para plurales). */
 export function buscarAyuda(pregunta: string): Respuesta | null {
@@ -129,8 +129,11 @@ export const SALUDO: Respuesta = {
 };
 
 /** Responde una pregunta. Las órdenes "revisar" y "qué falta" se resuelven en la pantalla (necesitan los datos). */
-export function intencion(pregunta: string): 'tributaria' | 'noticias' | 'asiento' | 'normativa' | 'revisar' | 'falta' | 'ayuda' {
-  const t = texto(pregunta);
+export function intencion(pregunta: string): 'tributaria' | 'glosario' | 'noticias' | 'asiento' | 'normativa' | 'revisar' | 'falta' | 'ayuda' {
+  const t = jerga(pregunta);
+  const monto = montoDe(pregunta);
+  // "¿qué es el CF?", "¿cuándo vence la 29?", "las DJ": definición antes que cálculo (salvo que traiga un monto para calcular)
+  if ((pideDefinicion(pregunta) || esTerminoSuelto(pregunta)) && !(monto !== null && esTributaria(pregunta))) return 'glosario';
   if (esTributaria(pregunta)) return 'tributaria';
   if (/\b(noticias?|circular(es)?|resolucion(es)?|que (publico|publicó|saco) el sii|novedades del sii)\b/.test(t)) return 'noticias';
   if (/\b(asiento|contabiliz\w*|registr\w*|deprecia\w*|vend\w*|venta|compr\w*|pague|gaste|aporte|retir\w*|prestamo|honorarios?|arriendo)\b/.test(t) && (montoDe(pregunta) !== null || /\bdeprecia/.test(t)) && !/\bcomo (cargo|hago|se)\b/.test(t)) return 'asiento';
@@ -156,6 +159,6 @@ export function respuestaNormativa(hoy = new Date()): Respuesta {
 }
 
 export const NO_ENTENDI: Respuesta = {
-  texto: 'No encontré ayuda para eso. Prueba con palabras como "cartola", "F29", "regla", "anular", "apertura", "respaldo" o "empresa"; pídeme "revisa mi empresa", o cuéntame una operación con su monto para armar el asiento.',
+  texto: 'No encontré respuesta para eso. Puedes preguntarme qué es un término ("¿qué es el crédito fiscal?", "¿cuándo vence la 29?", "¿qué DJ me tocan?"), pedirme un cálculo ("sácale el IVA a 119 lucas", "PPM de 10 palos al 1%"), cómo hacer algo en la app ("cartola", "regla", "anular", "respaldo"), que revise tu empresa, o contarme una operación con su monto para armar el asiento.',
   acciones: [{ tipo: 'recorrido', etiqueta: 'Ver el recorrido de la app' }],
 };
