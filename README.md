@@ -42,6 +42,10 @@ ofrece cargarlo en esa. Los datos se guardan en IndexedDB del navegador (alcanza
   como asiento manual con tu confirmación; dice qué cambió en la **normativa**; responde "¿cómo hago…?" con la ayuda de la app, dice qué falta en el mes y
   revisa la empresa (17 controles e integridad de los datos: repetidos, cruces rotos, reglas borradas, pagos sin respaldo,
   apertura faltante); lo que se puede corregir solo tiene un botón y pide confirmación. No usa servicios externos.
+- **Noticias del SII**: circulares y resoluciones de sii.cl (se leen cada semana), con un resumen de Riffo Junior hecho
+  con el texto oficial de cada una y el enlace al documento.
+- **Preguntas tributarias con cálculo** en Riffo Junior: Primera Categoría por régimen y año (con la tasa y su fuente),
+  crédito para los dueños, IVA, PPM y retención de honorarios.
 - **Normativa actualizada**: `public/normativa.json` (UTM, IVA, retención de honorarios, PPM mínimo, vidas útiles y
   novedades) se actualiza solo cada mes con la UTM publicada en sii.cl (GitHub Actions, `robot/actualizar-normativa.ts`).
 - **¿Cómo funciona?**: un recorrido guiado que marca cada parte de la pantalla y la explica en palabras simples.

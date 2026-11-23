@@ -8,9 +8,10 @@ import { aperturaSugerida, type ConfigContable, type Control } from './contabili
 import { reaplicarReglas, type Regla } from './cruce';
 import { texto } from './sugerir';
 import { montoDe } from './asientosAyuda';
+import { esTributaria } from './tributario';
 import { normativa, retencionHonorarios, ppmMinimo } from './normativa';
 
-export type Vista = 'inicio' | 'cargar' | 'clasificar' | 'documentos' | 'iva' | 'personal' | 'banco' | 'contabilidad';
+export type Vista = 'inicio' | 'cargar' | 'clasificar' | 'documentos' | 'iva' | 'personal' | 'banco' | 'contabilidad' | 'noticias';
 export type Accion =
   | { tipo: 'ir'; etiqueta: string; vista: Vista; pestana?: string }
   | { tipo: 'arreglar'; etiqueta: string; arreglo: Arreglo; explica: string }
@@ -123,13 +124,15 @@ export function aplicarArreglo(a: Arreglo, d: Datos): Partial<Pick<Datos, 'docs'
 
 // ------------------------------------------------------------------ conversación
 export const SALUDO: Respuesta = {
-  texto: 'Hola, soy Riffo Junior, tu asistente contable. Te explico cómo hacer las cosas en la app, te digo qué falta este mes, reviso tu empresa para encontrar errores y te ayudo a armar asientos (cuéntame la operación, por ejemplo: "compré un notebook en 800.000 neto con transferencia"). Uso la normativa vigente que la app actualiza desde el SII. Todo queda en tu navegador: no envío tus datos a ninguna parte.',
+  texto: 'Hola, soy Riffo Junior, tu asistente contable. Te explico cómo hacer las cosas en la app, te digo qué falta este mes, reviso tu empresa, te ayudo a armar asientos, calculo impuestos (Primera Categoría, crédito para los dueños, IVA, PPM, retención de honorarios) y te resumo las noticias del SII. Uso la normativa que la app actualiza desde sii.cl y te digo de dónde sale cada tasa. Tus datos no salen del navegador.',
   acciones: [],
 };
 
 /** Responde una pregunta. Las órdenes "revisar" y "qué falta" se resuelven en la pantalla (necesitan los datos). */
-export function intencion(pregunta: string): 'asiento' | 'normativa' | 'revisar' | 'falta' | 'ayuda' {
+export function intencion(pregunta: string): 'tributaria' | 'noticias' | 'asiento' | 'normativa' | 'revisar' | 'falta' | 'ayuda' {
   const t = texto(pregunta);
+  if (esTributaria(pregunta)) return 'tributaria';
+  if (/\b(noticias?|circular(es)?|resolucion(es)?|que (publico|publicó|saco) el sii|novedades del sii)\b/.test(t)) return 'noticias';
   if (/\b(asiento|contabiliz\w*|registr\w*|deprecia\w*|vend\w*|venta|compr\w*|pague|gaste|aporte|retir\w*|prestamo|honorarios?|arriendo)\b/.test(t) && (montoDe(pregunta) !== null || /\bdeprecia/.test(t)) && !/\bcomo (cargo|hago|se)\b/.test(t)) return 'asiento';
   if (/\b(normativa|ley(es)?|tasa|tasas|utm|novedad\w*|cambio\w* tributari\w*|sii)\b/.test(t) && !/\bcomo (cargo|hago)\b/.test(t)) return 'normativa';
   if (/\b(revis\w*|error(es)?|problema\w*|mal|arregl\w*|corregi\w*|falla\w*|diagnost\w*)\b/.test(t)) return 'revisar';

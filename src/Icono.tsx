@@ -1,5 +1,5 @@
 // Íconos de línea del menú (dibujados aquí: sin librerías ni marcas).
-export type NombreIcono = 'inicio' | 'cargar' | 'clasificar' | 'documentos' | 'iva' | 'personal' | 'banco' | 'contabilidad' | 'resumen' | 'ayuda' | 'guardar' | 'abrir' | 'cambiar';
+export type NombreIcono = 'inicio' | 'cargar' | 'clasificar' | 'documentos' | 'iva' | 'personal' | 'banco' | 'contabilidad' | 'resumen' | 'ayuda' | 'guardar' | 'abrir' | 'cambiar' | 'noticias';
 
 const TRAZOS: Record<NombreIcono, string> = {
   inicio: 'M3 11l9-7 9 7M5 10v10h5v-6h4v6h5V10',
@@ -15,6 +15,7 @@ const TRAZOS: Record<NombreIcono, string> = {
   guardar: 'M12 4v11m0 0l-4-4m4 4l4-4M4 19h16',
   abrir: 'M3 7a1 1 0 011-1h5l2 2h9a1 1 0 011 1v9a1 1 0 01-1 1H4a1 1 0 01-1-1z',
   cambiar: 'M7 7h13l-4-4M17 17H4l4 4',
+  noticias: 'M4 5h13v14H6a2 2 0 01-2-2zM17 9h3v8a2 2 0 01-2 2M7 9h7M7 13h7M7 16h4',
 };
 
 export default function Icono({ n }: { n: NombreIcono }) {

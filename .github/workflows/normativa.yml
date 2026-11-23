@@ -1,8 +1,8 @@
-name: Actualizar normativa (UTM del SII)
+name: Actualizar normativa y noticias del SII
 
 on:
   schedule:
-    - cron: '0 12 2 * *'      # el día 2 de cada mes, cuando el SII ya publicó la UTM
+    - cron: '0 12 * * 1'      # cada lunes: UTM nuevas y circulares y resoluciones de la semana
   workflow_dispatch:
 
 permissions:
@@ -24,9 +24,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if git diff --quiet public/normativa.json; then echo 'Sin cambios'; exit 0; fi
+          git add public/normativa.json public/noticias.json
+          if git diff --cached --quiet; then echo 'Sin cambios'; exit 0; fi
           git config user.name 'actualizador-normativa'
           git config user.email 'actions@users.noreply.github.com'
-          git commit -am 'Normativa: UTM del SII'
+          git commit -m 'Normativa y noticias del SII'
           git push
           gh workflow run pages.yml --ref main

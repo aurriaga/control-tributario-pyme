@@ -24,6 +24,7 @@ import { iniciarRecorrido } from './recorrido';
 import { ls, migrar, empresaActiva, empresas as listaEmpresas, claveDe, agregarEmpresa, activar, quitarEmpresa, datosDeEmpresa, importarRespaldo, clavesDocs, agregarLectura } from './almacen';
 import PorClasificar from './PorClasificar';
 import Asistente from './Asistente';
+import Noticias from './Noticias';
 import { contarPorClasificar } from './nucleo/porClasificar';
 import Icono, { type NombreIcono } from './Icono';
 
@@ -45,9 +46,9 @@ const SELLO: Record<ResultadoLectura['estado'], { texto: string; clase: string }
   error: { texto: 'No se pudo leer', clase: 'rojo' },
 };
 
-export type Vista = 'inicio' | 'cargar' | 'clasificar' | 'documentos' | 'iva' | 'personal' | 'banco' | 'contabilidad';
+export type Vista = 'inicio' | 'cargar' | 'clasificar' | 'documentos' | 'iva' | 'personal' | 'banco' | 'contabilidad' | 'noticias';
 const MENU: [Vista, string][] = [['inicio', 'Inicio'], ['cargar', 'Cargar documentos'], ['clasificar', 'Por clasificar'], ['documentos', 'Compras y ventas'],
-  ['iva', 'IVA y F29'], ['personal', 'Personal'], ['banco', 'Banco'], ['contabilidad', 'Contabilidad']];
+  ['iva', 'IVA y F29'], ['personal', 'Personal'], ['banco', 'Banco'], ['contabilidad', 'Contabilidad'], ['noticias', 'Noticias del SII']];
 const vistaDeHash = (): Vista => { const h = location.hash.slice(1) as Vista; return MENU.some(([v]) => v === h) ? h : 'inicio'; };
 
 interface Ficha { id: number; archivo: string; leyendo: boolean; resultado?: ResultadoLectura; file?: File; cargadoEn?: string }
@@ -179,7 +180,7 @@ export default function App() {
 
   const hay = !!(docs.length || f29s.length || movs.length || libros.length);
   const sinDatos = (texto: string) => <SinDatos texto={texto} onCargar={() => ir('cargar')} />;
-  const nombreIcono: Record<Vista, NombreIcono> = { inicio: 'inicio', cargar: 'cargar', clasificar: 'clasificar', documentos: 'documentos', iva: 'iva', personal: 'personal', banco: 'banco', contabilidad: 'contabilidad' };
+  const nombreIcono: Record<Vista, NombreIcono> = { inicio: 'inicio', cargar: 'cargar', clasificar: 'clasificar', documentos: 'documentos', iva: 'iva', personal: 'personal', banco: 'banco', contabilidad: 'contabilidad', noticias: 'noticias' };
 
   return (
     <div className="app-marco">
@@ -287,6 +288,8 @@ export default function App() {
 
         {vista === 'contabilidad' && (docs.length > 0 || movs.length > 0 ? <PanelContabilidad empresa={empresa.rut} docs={docs} f29s={f29s} movs={movs} libros={libros} honorarios={honorarios}
           cfg={conta} onCfg={setConta} controles={controles} /> : sinDatos('La contabilidad se arma sola cuando cargas documentos.'))}
+
+        {vista === 'noticias' && <Noticias />}
       </main>
 
       <Asistente datos={{ empresa, docs, f29s, movs, reglas, libros, honorarios, cfg: conta }} controles={controles} porClasificar={pendientes?.total ?? 0}

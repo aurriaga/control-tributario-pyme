@@ -1,0 +1,605 @@
+{
+ "actualizado": "2026-11-23",
+ "items": [
+  {
+   "tipo": "Resolución",
+   "numero": "162",
+   "fecha": "2026-11-20",
+   "titulo": "Resolución Exenta SII N° 162 del 20 de Noviembre del 2026",
+   "materia": "Fija criterios generales para aceptar las bases de acuerdo para conciliar y avenir, conforme con lo dispuesto en los artículos 132, 132 bis y 132 ter del código tributario. Deja sin efecto resolución ex. N°106 de 17 de noviembre de 2022.",
+   "fuente": "Subdirección Jurídica",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso162.pdf",
+   "rutina": false
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "161",
+   "fecha": "2026-11-19",
+   "titulo": "Resolución Exenta SII N° 161 del 19 de Noviembre del 2026",
+   "materia": "Autoriza a emitir mensualmente una única boleta electrónica de ventas y servicios en la forma y condiciones que indica.",
+   "fuente": "Subdirección de Asistencia al Contribuyente",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso161.pdf",
+   "rutina": false
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "160",
+   "fecha": "2026-11-17",
+   "titulo": "Resolución Exenta SII N° 160 del 17 de Noviembre del 2026",
+   "materia": "Autoriza a contribuyente que se indica, para emitir liquidación–factura por cada operación en reemplazo de la liquidación–factura consolidada mensual, cumpliendo los requisitos que se indican.",
+   "fuente": "Subdirección Fiscalización",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso160.pdf",
+   "rutina": true
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "159",
+   "fecha": "2026-11-16",
+   "titulo": "Resolución Exenta SII N° 159 del 16 de Noviembre del 2026",
+   "materia": "Autoriza acceso a los Servicios de Interoperabilidad Cartografía Digital “SII-MAPAS” a la Ilustre Municipalidad de Villa Alegre.",
+   "fuente": "Subdirección de avaluaciones",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso159.pdf",
+   "rutina": false
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "158",
+   "fecha": "2026-11-16",
+   "titulo": "Resolución Exenta SII N° 158 del 16 de Noviembre del 2026",
+   "materia": "Establece forma de declarar y pagar el impuesto que grava a las donaciones acogidas a la rebaja establecida en el artículo primero transitorio de la ley n° 21.850.",
+   "fuente": "Subdirección Fiscalizacion",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso158.pdf",
+   "rutina": false
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "157",
+   "fecha": "2026-11-16",
+   "titulo": "Resolución Exenta SII N° 157 del 16 de Noviembre del 2026",
+   "materia": "Establece forma y plazo de la declaración jurada que deben presentar los donantes que se acojan a lo dispuesto en el artículo primero transitorio de la ley n° 21.850.",
+   "fuente": "Subdirección Fiscalizacion",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso157.pdf",
+   "rutina": false
+  },
+  {
+   "tipo": "Circular",
+   "numero": "44",
+   "fecha": "2026-11-16",
+   "titulo": "Circular N° 44 del 16 de Noviembre del 2026",
+   "materia": "Informa tabla de cálculos de reajustes y multas para el mes de diciembre 2026.",
+   "fuente": "Subdirección Fiscalizacion",
+   "enlace": "https://www.sii.cl/normativa_legislacion/circulares/2026/circu44.pdf",
+   "rutina": true
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "156",
+   "fecha": "2026-11-13",
+   "titulo": "Resolución Exenta SII N° 156 del 13 de Noviembre del 2026",
+   "materia": "Autoriza a la entidad que indica para su habilitación en la plataforma de acceso único a la clave tributaria",
+   "fuente": "Subdirección de Asistencia al Contribuyente",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso156.pdf",
+   "rutina": true
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "155",
+   "fecha": "2026-11-11",
+   "titulo": "Resolución Exenta SII N° 155 del 11 de Noviembre del 2026",
+   "materia": "Reemplázase el Título XIV, del Libro II, del Compendio de Normas del Sistema de Pensiones de la Superintendencia de Pensiones, y derónganse la Resolución Ex. SII N° 40, de 2019, del Servicio de Impuestos Internos y la Circular Conjunta Nº 4 de la Tesorería General de la República.",
+   "fuente": "Subdirección Fiscalizacion",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso155.pdf",
+   "rutina": false
+  },
+  {
+   "tipo": "Circular",
+   "numero": "43",
+   "fecha": "2026-11-09",
+   "titulo": "Circular N° 43 del 09 de Noviembre del 2026",
+   "materia": "Operaciones de crédito de dinero. Valor de la Unidad de Fomento para los días comprendidos entre el 10 de noviembre de 2026 y el 9 de diciembre de 2026, ambos inclusive.",
+   "fuente": "Subdirección Normativa",
+   "enlace": "https://www.sii.cl/normativa_legislacion/circulares/2026/circu43.pdf",
+   "rutina": true
+  },
+  {
+   "tipo": "Circular",
+   "numero": "42",
+   "fecha": "2026-11-09",
+   "titulo": "Circular N° 42 del 09 de Noviembre del 2026",
+   "materia": "Tablas de impuesto único de segunda categoría para el mes de diciembre de 2026 e información adicional relacionada con dicho impuesto.",
+   "fuente": "Subdirección Normativa",
+   "enlace": "https://www.sii.cl/normativa_legislacion/circulares/2026/circu42.pdf",
+   "rutina": true
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "154",
+   "fecha": "2026-11-06",
+   "titulo": "Resolución Exenta SII N° 154 del 06 de Noviembre del 2026",
+   "materia": "Delega facultad que indica en funcionaria que se individualiza",
+   "fuente": "Subdirección Jurídica",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso154.pdf",
+   "rutina": false
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "153",
+   "fecha": "2026-11-04",
+   "titulo": "Resolución Exenta SII N° 153 del 04 de Noviembre del 2026",
+   "materia": "Materia: aprueba memorando de entendimiento entre el servicio de impuestos internos, la facultad de economía y negocios de la universidad de chile y el instituto de estudios fiscales del Ministerio De Hacienda Del Reino De España.",
+   "fuente": "Subdirección Desarrollo de las Personas",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso153.pdf",
+   "rutina": false
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "152",
+   "fecha": "2026-11-03",
+   "titulo": "Resolución Exenta SII N° 152 del 03 de Noviembre del 2026",
+   "materia": "Delega en el subdirector de contraloría interna la facultad que se contiene en el artículo 41 bis de la ley orgánica del servicio.",
+   "fuente": "Subdirección Contraloría Interna",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso152.pdf",
+   "rutina": false
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "151",
+   "fecha": "2026-11-03",
+   "titulo": "Resolución Exenta SII N° 151 del 03 de Noviembre del 2026",
+   "materia": "Aprueba Convenio de Intercambio de Información y Colaboración entre el Servicio Nacional de Pesca y Acuicultura y el Servicio de Impuestos Internos.",
+   "fuente": "Subdirección de Asistencia al Contribuyente",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso151.pdf",
+   "rutina": false
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "150",
+   "fecha": "2026-10-28",
+   "titulo": "Resolución Exenta SII N° 150 del 28 de Octubre del 2026",
+   "materia": "Otórguese acceso a la siguiente institución a la interfaz de programación de aplicaciones (api) inicio de actividades",
+   "fuente": "Subdirección de Asistencia al Contribuyente",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso150.pdf",
+   "rutina": false
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "149",
+   "fecha": "2026-10-27",
+   "titulo": "Resolución Exenta SII N° 149 del 27 de Octubre del 2026",
+   "materia": "Modifica resolución ex. Sii n° 143, de fecha 24.09.2009, que autorizó la operación de un sistema de intermediación electrónico en la venta de colaciones.",
+   "fuente": "Subdirección de Asistencia al Contribuyente",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso149.pdf",
+   "rutina": false
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "148",
+   "fecha": "2026-10-27",
+   "titulo": "Resolución Exenta SII N° 148 del 27 de Octubre del 2026",
+   "materia": "Deja sin efecto resolución exenta n°12 de 2026, que aprobó la solicitud de acceso a la interfaz de programación de aplicaciones (api) \"inicio de actividades\".",
+   "fuente": "Subdirección de Asistencia al Contribuyente",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso148.pdf",
+   "rutina": false
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "147",
+   "fecha": "2026-10-26",
+   "titulo": "Resolución Exenta SII N° 147 del 26 de Octubre del 2026",
+   "materia": "Deniega acceso a la siguiente institución a la interfaz de programación de aplicaciones (API) inicio de actividades.",
+   "fuente": "Subdirección de Asistencia al Contribuyente.",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso147.pdf",
+   "rutina": false
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "146",
+   "fecha": "2026-10-23",
+   "titulo": "Resolución Exenta SII N° 146 del 23 de Octubre del 2026",
+   "materia": "Establece procedimiento especial para solicitar devolución del impuesto al valor agregado según el artículo cuarto transitorio de la Ley N° 21.850.",
+   "fuente": "Subdirección Fiscalizacion",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso146.pdf",
+   "rutina": false
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "145",
+   "fecha": "2026-10-23",
+   "titulo": "Resolución Exenta SII N° 145 del 23 de Octubre del 2026",
+   "materia": "Fija criterios generales para la concesión de condonaciones en los trámites de conciliación o avenimiento extrajudicial, regulados en los artículos 132 bis y 132 ter, ambos del Código Tributario.",
+   "fuente": "Subdirección Jurídica",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso145.pdf",
+   "rutina": false
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "144",
+   "fecha": "2026-10-23",
+   "titulo": "Resolución Exenta SII N° 144 del 23 de Octubre del 2026",
+   "materia": "Fíjase exigencias sobre las facturas y guías de despacho que amparan el traslado de bienes corporales muebles y deja sin efecto la resolución ex. Sii n° 154, de 2025.",
+   "fuente": "Subdirección de Asistencia al Contribuyente",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso144.pdf",
+   "rutina": false
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "143",
+   "fecha": "2026-10-22",
+   "titulo": "Resolución Exenta SII N° 143 del 22 de Octubre del 2026",
+   "materia": "Materia: modifica resolución exenta sii n°160, de 12 de noviembre de 2025 y crea área que indica. Modifica resolución exenta sii n°87, de 17 de julio de 2025",
+   "fuente": "Subdirección de Asistencia al Contribuyente",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso143.pdf",
+   "rutina": false
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "142",
+   "fecha": "2026-10-20",
+   "titulo": "Resolución Exenta SII N° 142 del 20 de Octubre del 2026",
+   "materia": "Autoriza a la entidad que indica para su habilitación en la plataforma de acceso único a la clave tributaria",
+   "fuente": "Subdirección de Asistencia al Contribuyente",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso142.pdf",
+   "rutina": true
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "141",
+   "fecha": "2026-10-19",
+   "titulo": "Resolución Exenta SII N° 141 del 19 de Octubre del 2026",
+   "materia": "Establece formulario para declarar y pagar el impuesto único sustitutivo de los impuestos finales, aplicable sobre los saldos del fondo de utilidades reinvertidas y/o saldo total de utilidades tributables y/o retiros en exceso, que establecen los artículo undécimo y duodécimo transitorio de la ley n° 21.850.",
+   "fuente": "Subdirección Fiscalizacion",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso141.pdf",
+   "rutina": false
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "140",
+   "fecha": "2026-10-16",
+   "titulo": "Resolución Exenta SII N° 140 del 16 de Octubre del 2026",
+   "materia": "Deniega acceso a la siguiente institución a la interfaz de programación de aplicaciones (api) inicio de actividades",
+   "fuente": "Subdirección de Asistencia al Contribuyente",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso140.pdf",
+   "rutina": false
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "139",
+   "fecha": "2026-10-16",
+   "titulo": "Resolución Exenta SII N° 139 del 16 de Octubre del 2026",
+   "materia": "Deniega acceso a la siguiente institución a la interfaz de programación de aplicaciones (api) inicio de actividades",
+   "fuente": "Subdirección de Asistencia al Contribuyente",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso139.pdf",
+   "rutina": false
+  },
+  {
+   "tipo": "Circular",
+   "numero": "41",
+   "fecha": "2026-10-15",
+   "titulo": "Circular N° 41 del 15 de Octubre del 2026",
+   "materia": "Informa tabla de cálculos de reajustes y multas para el mes de noviembre 2026.",
+   "fuente": "Subdirección de Fiscalización",
+   "enlace": "https://www.sii.cl/normativa_legislacion/circulares/2026/circu41.pdf",
+   "rutina": true
+  },
+  {
+   "tipo": "Circular",
+   "numero": "40",
+   "fecha": "2026-10-13",
+   "titulo": "Circular N° 40 del 13 de Octubre del 2026",
+   "materia": "Operaciones de crédito de dinero. Valor de la Unidad de Fomento para los días comprendidos entre el 10 de octubre de 2026 y el 9 de noviembre de 2026, ambos inclusive.",
+   "fuente": "Subdirección Normativa",
+   "enlace": "https://www.sii.cl/normativa_legislacion/circulares/2026/circu40.pdf",
+   "rutina": true
+  },
+  {
+   "tipo": "Circular",
+   "numero": "39",
+   "fecha": "2026-10-13",
+   "titulo": "Circular N° 39 del 13 de Octubre del 2026",
+   "materia": "Tablas de impuesto único de segunda categoría para el mes de noviembre de 2026 e información adicional relacionada con dicho impuesto.",
+   "fuente": "Subdirección Normativa",
+   "enlace": "https://www.sii.cl/normativa_legislacion/circulares/2026/circu39.pdf",
+   "rutina": true
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "138",
+   "fecha": "2026-10-06",
+   "titulo": "Resolución Exenta SII N° 138 del 06 de Octubre del 2026",
+   "materia": "Aprueba convenio de colaboración entre el servicio de impuestos internos y el instituto chileno de derecho tributario.",
+   "fuente": "Subdirección de Asistencia al Contribuyente",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso138.pdf",
+   "rutina": false
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "137",
+   "fecha": "2026-10-06",
+   "titulo": "Resolución Exenta SII N° 137 del 06 de Octubre del 2026",
+   "materia": "Otórguese acceso a la siguiente institución a la interfaz de programación de aplicaciones (api) inicio de actividades",
+   "fuente": "Subdirección de Asistencia al Contribuyente",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso137.pdf",
+   "rutina": false
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "136",
+   "fecha": "2026-10-06",
+   "titulo": "Resolución Exenta SII N° 136 del 06 de Octubre del 2026",
+   "materia": "Otórguese acceso a la siguiente institución a la interfaz de programación de aplicaciones (api) inicio de actividades",
+   "fuente": "Subdirección de Asistencia al Contribuyente",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso136.pdf",
+   "rutina": false
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "135",
+   "fecha": "2026-10-02",
+   "titulo": "Resolución Exenta SII N° 135 del 02 de Octubre del 2026",
+   "materia": "Fija las fechas de vencimiento para la presentación de declaraciones juradas que se indican, para el año tributario 2027",
+   "fuente": "Subdirección Fiscalización",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso135.pdf",
+   "rutina": false
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "134",
+   "fecha": "2026-09-30",
+   "titulo": "Resolución Exenta SII N° 134 del 30 de Septiembre del 2026",
+   "materia": "Autoriza el envío de información de guía aérea courier en reemplazo de la guía de despacho.",
+   "fuente": "Subdirección Fiscalización",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso134.pdf",
+   "rutina": false
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "133",
+   "fecha": "2026-09-30",
+   "titulo": "Resolución Exenta SII N° 133 del 30 de Septiembre del 2026",
+   "materia": "Amplía plazo establecido por resolución ex. Sii n° 46 de 2026, para que las municipalidades informen al servicio de impuestos internos la nómina de bienes raíces no agrícolas que correspondan a sitios no edificados, propiedades abandonadas o pozos lastreros, a que se refiere el artículo 8° de la ley n° 17.235.",
+   "fuente": "Subdirección de avaluaciones",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso133.pdf",
+   "rutina": false
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "132",
+   "fecha": "2026-09-25",
+   "titulo": "Resolución Exenta SII N° 132 del 25 de Septiembre del 2026",
+   "materia": "Autoriza acceso a los Servicios de Interoperabilidad Cartografía Digital “SII-MAPAS” a la Ilustre Municipalidad de Colina",
+   "fuente": "Subdirección de avaluaciones",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso132.pdf",
+   "rutina": false
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "131",
+   "fecha": "2026-09-25",
+   "titulo": "Resolución Exenta SII N° 131 del 25 de Septiembre del 2026",
+   "materia": "Autoriza acceso a los Servicios de Interoperabilidad Cartografía Digital “SII-MAPAS” a la Ilustre Municipalidad de Puerto Octay",
+   "fuente": "Subdirección de avaluaciones",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso131.pdf",
+   "rutina": false
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "130",
+   "fecha": "2026-09-25",
+   "titulo": "Resolución Exenta SII N° 130 del 25 de Septiembre del 2026",
+   "materia": "Autoriza a la entidad que indica para su habilitación en la plataforma de acceso único a la clave tributaria",
+   "fuente": "Subdirección de Asistencia al Contribuyente",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso130.pdf",
+   "rutina": true
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "129",
+   "fecha": "2026-09-24",
+   "titulo": "Resolución Exenta SII N° 129 del 24 de Septiembre del 2026",
+   "materia": "Delega facultad que indica",
+   "fuente": "Subdirección de Tecnologías de la Información",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso129.pdf",
+   "rutina": false
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "128",
+   "fecha": "2026-09-16",
+   "titulo": "Resolución Exenta SII N° 128 del 16 de Septiembre del 2026",
+   "materia": "Autoriza a proceder conforme al modelo de operación de contabilidad electrónica a los contribuyentes que señala.",
+   "fuente": "Subdirección de Asistencia al Contribuyente",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso128.pdf",
+   "rutina": false
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "127",
+   "fecha": "2026-09-15",
+   "titulo": "Resolución Exenta SII N° 127 del 15 de Septiembre del 2026",
+   "materia": "Deja sin efecto resolución exenta n°16 de 2026, que aprobó la solicitud de acceso a la interfaz de programación de aplicaciones (api) \"inicio de actividades\".",
+   "fuente": "Subdirección de Asistencia al Contribuyente",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso127.pdf",
+   "rutina": false
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "126",
+   "fecha": "2026-09-14",
+   "titulo": "Resolución Exenta SII N° 126 del 14 de Septiembre del 2026",
+   "materia": "Autorización excepcional a contribuyente que se indica para dar cumplimiento a las obligaciones establecidas en la resolución ex. Sii n° 36 de 2024 en las condiciones que se señalan",
+   "fuente": "Subdirección de Asistencia al Contribuyente",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso126.pdf",
+   "rutina": true
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "125",
+   "fecha": "2026-09-14",
+   "titulo": "Resolución Exenta SII N° 125 del 14 de Septiembre del 2026",
+   "materia": "Deniega acceso a la siguiente institución a la interfaz de programación de aplicaciones (api) inicio de actividades",
+   "fuente": "Subdirección de asistencia al contribuyente",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso125.pdf",
+   "rutina": false
+  },
+  {
+   "tipo": "Circular",
+   "numero": "38",
+   "fecha": "2026-09-11",
+   "titulo": "Circular N° 38 del 11 de Septiembre del 2026",
+   "materia": "Operaciones de crédito de dinero. Valor de la Unidad de Fomento para los días comprendidos entre el 10 de septiembre de 2026 y el 9 de octubre de 2026, ambos inclusive.",
+   "fuente": "Subdirección Normativa",
+   "enlace": "https://www.sii.cl/normativa_legislacion/circulares/2026/circu38.pdf",
+   "rutina": true
+  },
+  {
+   "tipo": "Circular",
+   "numero": "37",
+   "fecha": "2026-09-11",
+   "titulo": "Circular N° 37 del 11 de Septiembre del 2026",
+   "materia": "Tablas de impuesto único de segunda categoría para el mes de octubre de 2026 e información adicional relacionada con dicho impuesto.",
+   "fuente": "Subdirección Normativa",
+   "enlace": "https://www.sii.cl/normativa_legislacion/circulares/2026/circu37.pdf",
+   "rutina": true
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "124",
+   "fecha": "2026-09-10",
+   "titulo": "Resolución Exenta SII N° 124 del 10 de Septiembre del 2026",
+   "materia": "Manténgase vigente la nómina de bienes afectos de la resolución ex. Sii n°194 año 2025, en conformidad a lo establecido en el artículo 9° de la ley n° 21.420",
+   "fuente": "Subdirección Avaluaciones",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso124.pdf",
+   "rutina": false
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "123",
+   "fecha": "2026-09-10",
+   "titulo": "Resolución Exenta SII N° 123 del 10 de Septiembre del 2026",
+   "materia": "Delega facultad que indica en el funcionario que se individualiza.",
+   "fuente": "Subdirección Jurídica",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso123.pdf",
+   "rutina": false
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "122",
+   "fecha": "2026-09-10",
+   "titulo": "Resolución Exenta SII N° 122 del 10 de Septiembre del 2026",
+   "materia": "Autoriza acceso a los Servicios de Interoperabilidad Cartografía Digital “SII-MAPAS” a la Ilustre Municipalidad de Cochamó.",
+   "fuente": "Subdirección de Avaluaciones",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso122.pdf",
+   "rutina": false
+  },
+  {
+   "tipo": "Circular",
+   "numero": "36",
+   "fecha": "2026-09-10",
+   "titulo": "Circular N° 36 del 10 de Septiembre del 2026",
+   "materia": "Informa tabla de cálculos de reajustes y multas para el mes de octubre 2026",
+   "fuente": "Subdirección de Fiscalización",
+   "enlace": "https://www.sii.cl/normativa_legislacion/circulares/2026/circu36.pdf",
+   "rutina": true
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "121",
+   "fecha": "2026-09-04",
+   "titulo": "Resolución Exenta SII N° 121 del 04 de Septiembre del 2026",
+   "materia": "Implementa nuevas validaciones aplicables a los archivos de los documentos tributarios electronicos en los procesos de facturacion electronica.",
+   "fuente": "Subdireccion de Asistencia al Contribuyente",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso121.pdf",
+   "rutina": false
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "120",
+   "fecha": "2026-09-04",
+   "titulo": "Resolución Exenta SII N° 120 del 04 de Septiembre del 2026",
+   "materia": "Otórguese acceso a la siguiente institución a la interfaz de programación de aplicaciones (api) inicio de actividades.",
+   "fuente": "Subdirección de Asistencia al Contribuyente",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso120.pdf",
+   "rutina": false
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "119",
+   "fecha": "2026-09-03",
+   "titulo": "Resolución Exenta SII N° 119 del 03 de Septiembre del 2026",
+   "materia": "Delega facultad que indica en la funcionaria que se individualiza",
+   "fuente": "Subdirección Jurídica",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso119.pdf",
+   "rutina": false
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "118",
+   "fecha": "2026-09-03",
+   "titulo": "Resolución Exenta SII N° 118 del 03 de Septiembre del 2026",
+   "materia": "Autoriza a la entidad que indica para su habilitación en la plataforma de acceso único a la clave tributaria",
+   "fuente": "Subdirección de Asistencia al Contribuyente",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso118.pdf",
+   "rutina": true
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "117",
+   "fecha": "2026-09-02",
+   "titulo": "Resolución Exenta SII N° 117 del 02 de Septiembre del 2026",
+   "materia": "Declara término de giro a los contribuyentes que se identifican, que presentan 36 o más periodos tributarios sin operaciones según lo dispuesto en el inciso final del artículo 69 del código tributario.",
+   "fuente": "Subdirección de Asistencia al Contribuyente",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso117.pdf",
+   "rutina": false
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "116",
+   "fecha": "2026-08-31",
+   "titulo": "Resolución Exenta SII N° 116 del 31 de Agosto del 2026",
+   "materia": "Reemplaza formato, contenido e instrucciones de declaraciones juradas contenidas en las resoluciones que se indican.",
+   "fuente": "Subdirección de Fiscalización.",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso116.pdf",
+   "rutina": false
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "115",
+   "fecha": "2026-08-31",
+   "titulo": "Resolución Exenta SII N° 115 del 31 de Agosto del 2026",
+   "materia": "Establece obligación de presentar la declaración jurada anual Nº 1966 sobre personas o entidades que declararon que su actividad no está sujeta a la obligación de inicio de actividades, conforme al inciso decimosegundo del artículo 68 del Código Tributario. Deja sin efecto resolutivos 5° y 4° de las resoluciones Ex. N° 99 y N° 127, respectivamente, ambas de 2025.",
+   "fuente": "Subdirección de Fiscalización.",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso115.pdf",
+   "rutina": false
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "114",
+   "fecha": "2026-08-31",
+   "titulo": "Resolución Exenta SII N° 114 del 31 de Agosto del 2026",
+   "materia": "Instruye sobre la forma de emisión de los certificados de donaciones acogidas al título VIII bis del decreto Ley N° 3.063 de 1979, del ministerio del interior, emitidos a través del portal de donaciones administrado por la secretaría técnica. Deja sin efecto la resolución Ex. N° 77 de 2022.",
+   "fuente": "Subdirección de Fiscalización.",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso114.pdf",
+   "rutina": false
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "113",
+   "fecha": "2026-08-31",
+   "titulo": "Resolución Exenta SII N° 113 del 31 de Agosto del 2026",
+   "materia": "Establece obligación de presentar la declaración jurada anual N°1965 sobre montos percibidos y/o devengados por creadores de contenido digital y empresas proveedoras de contenido digital.",
+   "fuente": "Subdirección de Fiscalización.",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso113.pdf",
+   "rutina": false
+  },
+  {
+   "tipo": "Resolución",
+   "numero": "112",
+   "fecha": "2026-08-31",
+   "titulo": "Resolución Exenta SII N° 112 del 31 de Agosto del 2026",
+   "materia": "Modifica resolución Ex. SII Nº107 de 2025 que reestructuró la declaración jurada anual 1922 y la resolución Ex. SII N°112 de 2025 que establece la declaración jurada anual 1962.",
+   "fuente": "Subdirección de Fiscalización.",
+   "enlace": "https://www.sii.cl/normativa_legislacion/resoluciones/2026/reso112.pdf",
+   "rutina": false
+  }
+ ]
+}

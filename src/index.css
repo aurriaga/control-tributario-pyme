@@ -406,3 +406,12 @@ tr.apagada td { opacity: .5; }
 .asis-asiento p { margin: 0; white-space: normal; }
 .asis-asiento table { font-size: 12.5px; background: var(--hoja); border-radius: 8px; }
 .asis-asiento th, .asis-asiento td { padding: 4px 6px; }
+
+/* Noticias del SII */
+.riffo-resumen { padding: 14px 16px; border-radius: 14px; background: var(--anil-suave); border-left: 6px solid var(--anil); margin-bottom: 16px; }
+.riffo-resumen p { margin: 6px 0 0; white-space: pre-line; font-size: 15px; }
+.ver-rutina { display: flex; gap: 8px; align-items: center; font-size: 14px; color: var(--tenue); margin: 8px 0 12px; }
+.lista-noticias { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.lista-noticias li { padding: 12px 14px; border-radius: 12px; background: var(--papel); }
+.lista-noticias p { margin: 6px 0 0; font-size: 15px; }
+.lista-noticias p.vacio { font-size: 13px; }

@@ -4,6 +4,8 @@ import { buscarAyuda, diagnosticar, aplicarArreglo, intencion, respuestaNormativ
 import { proponerAsiento, comoManual, type AsientoPropuesto } from './nucleo/asientosAyuda';
 import type { LineaManual } from './nucleo/contabilidad';
 import { pesos } from './formato';
+import { responderTributaria } from './nucleo/tributario';
+import { resumenNoticias } from './nucleo/noticias';
 import type { PanelMes } from './nucleo/panel';
 import { periodoLegible } from './nucleo/lector';
 
@@ -13,7 +15,7 @@ interface Props {
   onIr: (v: Vista, pestana?: string) => void; onArreglar: (cambios: ReturnType<typeof aplicarArreglo>) => void; onRecorrido: () => void;
   onAgregarAsiento: (lineas: LineaManual[]) => void;
 }
-const CHIPS = ['Revisa mi empresa', '¿Qué falta este mes?', 'Asiento: depreciación de un vehículo de 12.000.000', '¿Qué cambió en la normativa?', '¿Cómo creo una regla?'];
+const CHIPS = ['Revisa mi empresa', '¿Qué falta este mes?', 'Noticias del SII', 'Si tengo 30.000.000 de renta, ¿cuánto pago de primera categoría siendo 14 D N°3?', 'Asiento: depreciación de un vehículo de 12.000.000'];
 const CHIP_NIVEL = { error: 'rojo', aviso: 'ambar', ok: 'verde' } as const;
 
 export default function Asistente({ datos, controles, mes, porClasificar, onIr, onArreglar, onRecorrido, onAgregarAsiento }: Props) {
@@ -42,7 +44,9 @@ export default function Asistente({ datos, controles, mes, porClasificar, onIr, 
     const p = q.trim(); if (!p) return;
     const i = intencion(p);
     let r: Mensaje;
-    if (i === 'asiento') {
+    if (i === 'tributaria') r = { de: 'app', ...(responderTributaria(p) ?? NO_ENTENDI) };
+    else if (i === 'noticias') r = { de: 'app', texto: resumenNoticias(), acciones: [{ tipo: 'ir', etiqueta: 'Ver todas las noticias', vista: 'noticias' }] };
+    else if (i === 'asiento') {
       const a = proponerAsiento(p, datos.cfg.plan);
       r = a ? { de: 'app', texto: `Te propongo este asiento: ${a.titulo.toLowerCase()}. Revísalo antes de agregarlo.`, asiento: a }
         : { de: 'app', texto: 'Para armar el asiento necesito la operación y el monto. Por ejemplo: "vendí 1.190.000 con boleta en efectivo", "compré un notebook en 800.000 neto con transferencia", "depreciación de una camioneta de 15.000.000" o "boleta de honorarios de 300.000".' };

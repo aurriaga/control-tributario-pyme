@@ -8,6 +8,7 @@ import '@fontsource/atkinson-hyperlegible/700.css'
 import './index.css'
 import { iniciarAlmacen } from './almacen'
 import { aplicarNormativa } from './nucleo/normativa'
+import { aplicarNoticias } from './nucleo/noticias'
 
 /** Normativa vigente (UTM y tasas) publicada junto a la app y actualizada cada mes desde el SII; sin conexión quedan los valores incluidos. */
 async function cargarNormativa() {
@@ -15,6 +16,10 @@ async function cargarNormativa() {
     const r = await fetch('normativa.json', { cache: 'no-cache', signal: AbortSignal.timeout(4000) })
     if (r.ok) aplicarNormativa(await r.json())
   } catch { /* sin conexión: valores incluidos */ }
+  try {
+    const r = await fetch('noticias.json', { cache: 'no-cache', signal: AbortSignal.timeout(4000) })
+    if (r.ok) aplicarNoticias(await r.json())
+  } catch { /* sin conexión: sin noticias */ }
 }
 
 // Primero se abre el almacén (IndexedDB) y se lee la normativa; después se dibuja la app

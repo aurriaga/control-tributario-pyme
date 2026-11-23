@@ -12,6 +12,8 @@ export interface Normativa {
   retencionHonorarios: Record<string, number>;  // año → tasa (Ley 21.133)
   ppmMinimo: Record<string, number>;            // año → tasa mínima (Pro Pyme; Ley 21.850)
   vidaUtil: Record<string, number>;             // años, vida útil normal SII (Res. Ex. 43/2002)
+  idpc: { general: Record<string, number>; propyme: Record<string, number>; transparente: Record<string, number>; fuente: string };   // año comercial → tasa
+  factorCredito: { propyme: Record<string, number>; general: Record<string, number>; fuente: string };              // crédito por IDPC para los dueños
   novedades: Novedad[];
 }
 
@@ -21,6 +23,10 @@ let actual: Normativa = {
   retencionHonorarios: { '2025': 0.145, '2026': 0.1525, '2027': 0.16, '2028': 0.17 },
   ppmMinimo: { '2025': 0.00125, '2026': 0.00125, '2027': 0.00125, '2028': 0.0025, '2029': 0.0023 },
   vidaUtil: { computadores: 6, vehiculos: 7, muebles: 7, maquinaria: 15 },
+  idpc: { general: { '2020': 0.27 }, propyme: { '2025': 0.125, '2026': 0.125, '2027': 0.125, '2028': 0.15, '2029': 0.25 }, transparente: { '2020': 0 },
+    fuente: 'Art. 20 LIR (régimen general 27%); Ley 21.755 y Circular SII N° 53/2025 (Pro Pyme 14 D: 12,5% años comerciales 2025-2027, 15% en 2028, 25% después)' },
+  factorCredito: { propyme: { '2025': 0.142857, '2026': 0.142857, '2027': 0.142857, '2028': 0.17647, '2029': 0.333333 }, general: { '2020': 0.369863 },
+    fuente: 'Circular SII N° 53/2025 (factor 0,142857 en 2025-2027 y 0,176470 en 2028); régimen general: crédito con obligación de restituir el 35% (art. 56 y 63 LIR)' },
   novedades: [],
 };
 
@@ -38,6 +44,8 @@ const porAnio = (t: Record<string, number>, anio: number) => {
 };
 export const retencionHonorarios = (anio: number) => porAnio(actual.retencionHonorarios, anio);
 export const ppmMinimo = (anio: number) => porAnio(actual.ppmMinimo, anio);
+export const tasaIDPC = (regimen: 'general' | 'propyme' | 'transparente', anio: number) => porAnio(actual.idpc[regimen], anio);
+export const factorCredito = (regimen: 'general' | 'propyme', anio: number) => porAnio(actual.factorCredito[regimen], anio);
 
 const MESES_UTM = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 /** Lee la tabla "Mes | UTM | UTA | …" de la página anual de la UTM del SII. */
