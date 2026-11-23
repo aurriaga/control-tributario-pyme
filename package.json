@@ -11,6 +11,7 @@
     "robot": "vite-node robot/robot.ts --"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.13.0",
     "@fontsource/atkinson-hyperlegible": "^5.2.5",
     "@fontsource/bricolage-grotesque": "^5.2.5",
     "pdfjs-dist": "^4.10.38",

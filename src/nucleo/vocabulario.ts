@@ -3,7 +3,7 @@
 // contable chileno. Cada definición cita la ley o la página del SII de donde sale; las fechas que cambian cada año
 // (vencimientos de las DJ) dicen a qué año tributario corresponden.
 import { texto } from './sugerir';
-import { normativa, retencionHonorarios, tasaIDPC } from './normativa';
+import { normativa, retencionHonorarios, tasaIDPC, restitucion } from './normativa';
 import type { Respuesta, Vista } from './asistente';
 
 // ------------------------------------------------------------------ jerga → términos de la app
@@ -135,7 +135,7 @@ const GLOSARIO: Termino[] = [
   { re: / gasto rechazado /, texto: () => 'Gasto rechazado: un gasto que no cumple los requisitos para rebajarse de la renta (no es necesario para el negocio, no está respaldado o es de otro año) o que la ley rechaza expresamente. No rebaja la base de Primera Categoría y, según el caso, paga un impuesto adicional del art. 21. Se informa en la DJ 1909.', fuente: `${LIR}, arts. 21 y 31` },
   { re: / gasto aceptado /, texto: () => 'Gasto aceptado: el que rebaja la renta porque es necesario para producirla, es del año, está pagado o adeudado y se respalda con documentos (factura, boleta, contrato).', fuente: `${LIR}, art. 31` },
   { re: / retiros /, texto: () => 'Retiros: la plata que el dueño o los socios sacan de la empresa para ellos. No es gasto de la empresa: en la contabilidad va a una cuenta de patrimonio (retiros o cuenta particular). Tributa en el Global Complementario del dueño, con crédito por la Primera Categoría, y se informa en la DJ 1948.', fuente: `${LIR}, arts. 14 y 54` },
-  { re: / pro pyme | propyme | regimen(?:es)? tributarios? | 14 ?a | 14 ?d /, texto: () => `Regímenes de las empresas:\n• Pro Pyme General (14 D N° 3): paga Primera Categoría (${pct(tasaIDPC('propyme', anio()))} en ${anio()}) y puede llevar contabilidad simplificada; los dueños tributan al retirar.\n• Pro Pyme Transparente (14 D N° 8): la empresa no paga Primera Categoría; las utilidades se atribuyen a los dueños.\n• Régimen general (14 A): Primera Categoría ${pct(tasaIDPC('general', anio()))}; el dueño restituye el 35% del crédito.\nPara ser Pro Pyme, el promedio de ingresos de los últimos 3 años no debe pasar de 75.000 UF.`, fuente: `${LIR}, art. 14 letras A y D` },
+  { re: / pro pyme | propyme | regimen(?:es)? tributarios? | 14 ?a | 14 ?d /, texto: () => `Regímenes de las empresas:\n• Pro Pyme General (14 D N° 3): paga Primera Categoría (${pct(tasaIDPC('propyme', anio()))} en ${anio()}) y puede llevar contabilidad simplificada; los dueños tributan al retirar.\n• Pro Pyme Transparente (14 D N° 8): la empresa no paga Primera Categoría; las utilidades se atribuyen a los dueños.\n• Régimen general (14 A): Primera Categoría ${pct(tasaIDPC('general', anio()))} en ${anio()}; el dueño restituye el ${pct(restitucion(anio()))} del crédito. La Ley 21.850 baja la tasa a 25,5% (2027), 24% (2028) y 23% (2029) y elimina la restitución de a poco (30%, 20% y 0%).\nPara ser Pro Pyme, el promedio de ingresos de los últimos 3 años no debe pasar de 75.000 UF.`, fuente: `${LIR}, art. 14 letras A y D` },
   { re: / cotizaciones | previred /, texto: () => 'Cotizaciones previsionales: lo que se descuenta del sueldo para AFP, salud y seguro de cesantía, más los aportes que paga el empleador (seguro de invalidez, cesantía, mutual). Se pagan en PREVIRED hasta el día 10 del mes siguiente (día 13 si se pagan por internet).', fuente: 'DL 3.500, art. 19', vista: ['Ir a Personal', 'personal'] },
   { re: / remuneraciones /, texto: () => 'Remuneraciones: el sueldo y los demás pagos al trabajador. Del sueldo bruto se descuentan las cotizaciones y el impuesto único; el líquido es lo que recibe. En la app cada libro de remuneraciones se revisa en "Personal" y se contabiliza solo.', fuente: 'Código del Trabajo, art. 41', vista: ['Ir a Personal', 'personal'] },
   // --- contabilidad
@@ -181,4 +181,12 @@ export function responderGlosario(pregunta: string): Respuesta | null {
   const g = buscarTermino(t);
   if (!g) return null;
   return { texto: `${g.texto()}${g.fuente ? `\nFuente: ${g.fuente}.` : ''}`, acciones: g.vista ? [{ tipo: 'ir', etiqueta: g.vista[0], vista: g.vista[1], pestana: g.vista[2] }] : [] };
+}
+
+/** El glosario y las DJ como documentos para el buscador de Riffo. */
+export function documentosGlosario(): { titulo: string; texto: string; fuente?: string }[] {
+  return [
+    ...GLOSARIO.map(g => { const t = g.texto(); return { titulo: t.split(':')[0], texto: t, fuente: g.fuente }; }),
+    ...DJS.map(d => ({ titulo: `DJ ${d.n}`, texto: djTexto(d), fuente: FUENTE_DJ })),
+  ];
 }

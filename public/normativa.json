@@ -49,6 +49,12 @@
  },
  "novedades": [
   {
+   "fecha": "2026-10-17",
+   "titulo": "Ley 21.850: Primera Categoría baja a 23% en el régimen general",
+   "detalle": "Régimen general (14 A): 25,5% en AT 2028, 24% en AT 2029 y 23% desde AT 2030; la restitución del crédito baja a 30%, 20% y 0% (integración total).",
+   "fuente": "SII, noticia del 19-10-2026; Ley 21.850 (Diario Oficial 17-10-2026)"
+  },
+  {
    "fecha": "2026-11-23",
    "titulo": "Tasa de Primera Categoría Pro Pyme",
    "detalle": "12,5% en los años comerciales 2025, 2026 y 2027; 15% en 2028; 25% desde 2029 (sujeto a la cotización de la Ley 21.735).",
@@ -81,7 +87,10 @@
  ],
  "idpc": {
   "general": {
-   "2020": 0.27
+   "2020": 0.27,
+   "2027": 0.255,
+   "2028": 0.24,
+   "2029": 0.23
   },
   "propyme": {
    "2025": 0.125,
@@ -93,7 +102,7 @@
   "transparente": {
    "2020": 0
   },
-  "fuente": "Art. 20 LIR (régimen general 27%); Ley 21.755 y Circular SII N° 53/2025 (Pro Pyme 14 D: 12,5% años comerciales 2025-2027, 15% en 2028, 25% después)"
+  "fuente": "Art. 20 LIR; Ley 21.850 (régimen general 14 A: 27% hasta el año comercial 2026, 25,5% en 2027, 24% en 2028 y 23% desde 2029; SII, noticia del 19-10-2026); Ley 21.755 y Circular SII N° 53/2025 (Pro Pyme 14 D: 12,5% años comerciales 2025-2027, 15% en 2028)"
  },
  "factorCredito": {
   "propyme": {
@@ -104,8 +113,20 @@
    "2029": 0.333333
   },
   "general": {
-   "2020": 0.369863
+   "2020": 0.369863,
+   "2027": 0.342282,
+   "2028": 0.315789,
+   "2029": 0.298701
   },
-  "fuente": "Circular SII N° 53/2025 (factor 0,142857 en 2025-2027 y 0,176470 en 2028); régimen general: crédito con obligación de restituir el 35% (art. 56 y 63 LIR)"
+  "fuente": "Circular SII N° 53/2025 (Pro Pyme: factor 0,142857 en 2025-2027 y 0,176470 en 2028); régimen general: factor = tasa ÷ (1 − tasa), con restitución según la Ley 21.850"
+ },
+ "restitucion": {
+  "general": {
+   "2020": 0.35,
+   "2027": 0.3,
+   "2028": 0.2,
+   "2029": 0
+  },
+  "fuente": "Art. 56 y 63 LIR; Ley 21.850 (SII, noticia del 19-10-2026: 30% en AT 2028, 20% en AT 2029 y 0% desde AT 2030)"
  }
 }

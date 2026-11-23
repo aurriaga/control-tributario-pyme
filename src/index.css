@@ -415,3 +415,12 @@ tr.apagada td { opacity: .5; }
 .lista-noticias li { padding: 12px 14px; border-radius: 12px; background: var(--papel); }
 .lista-noticias p { margin: 6px 0 0; font-size: 15px; }
 .lista-noticias p.vacio { font-size: 13px; }
+
+/* Riffo Junior: modo IA */
+.asistente header .asis-ia-boton { grid-column: 1; justify-self: start; font-size: 12px; }
+.asis-ia { padding: 10px 14px; border-bottom: 1px solid var(--linea); background: var(--papel); font-size: 13px; display: grid; gap: 6px; }
+.asis-ia p { margin: 0; }
+.asis-ia .asis-escribir { padding: 0; }
+.asis-msj.cargando { opacity: .75; font-style: italic; }
+.asis-msj.ia { border-left: 3px solid var(--anil); }
+.asis-etiqueta { display: block; margin-bottom: 4px; font-size: 11.5px; font-weight: 700; color: var(--anil); }

@@ -3,7 +3,7 @@
 // "30 millones de crédito"), muestra ambas. Es una estimación: no reemplaza la revisión del contador.
 import { montoDe } from './asientosAyuda';
 import { jerga } from './vocabulario';
-import { normativa, tasaIDPC, factorCredito, retencionHonorarios, ppmMinimo } from './normativa';
+import { normativa, tasaIDPC, factorCredito, retencionHonorarios, ppmMinimo, restitucion } from './normativa';
 import type { Respuesta } from './asistente';
 
 type Regimen = 'propyme' | 'general' | 'transparente';
@@ -68,9 +68,11 @@ export function responderTributaria(pregunta: string, hoy = new Date()): Respues
     lineas.push(`${dosLecturas ? 'a) Si los ' + $(monto) + ' son la renta líquida imponible (la utilidad tributaria): ' : `Con una renta líquida imponible de ${$(monto)}: `}impuesto de Primera Categoría = ${$(monto)} × ${pct(tasa)} = ${$(monto * tasa)}.`);
     if (dosLecturas || /\b(retiro|dividendo|distribu|dueno|socio|global)\w*/.test(t)) {
       const credito = Math.round(monto * factor);
-      lineas.push(`${dosLecturas ? 'b) Si los ' + $(monto) + ' son retiros o dividendos que reciben los dueños: ' : ''}el crédito por Primera Categoría para el dueño es ${$(monto)} × factor ${factor.toLocaleString('es-CL', { maximumFractionDigits: 6 })} = ${$(credito)}; se suma a la base del Global Complementario (incremento) y se descuenta del impuesto.${reg === 'general' ? ' En el régimen general el dueño debe restituir el 35% de ese crédito.' : ''}`);
+      lineas.push(`${dosLecturas ? 'b) Si los ' + $(monto) + ' son retiros o dividendos que reciben los dueños: ' : ''}el crédito por Primera Categoría para el dueño es ${$(monto)} × factor ${factor.toLocaleString('es-CL', { maximumFractionDigits: 6 })} = ${$(credito)}; se suma a la base del Global Complementario (incremento) y se descuenta del impuesto.${reg === 'general' ? (restitucion(anio) > 0 ? ` En el régimen general el dueño debe restituir el ${pct(restitucion(anio))} de ese crédito (año comercial ${anio}).` : ` Desde el año comercial 2029 el crédito es íntegro: no se restituye nada (Ley 21.850).`) : ''}`);
     }
     if (/\bppm\b/.test(t)) lineas.push('Los PPM pagados en el año se descuentan del impuesto en el F22: si son mayores, la diferencia se devuelve.');
+    if (reg === 'propyme' && anio >= 2029) supuestos.push('Para 2029 en adelante usé la tasa Pro Pyme que dejó la Ley 21.755; la Ley 21.850 baja la tasa general a 23% desde 2029 y el SII todavía no publica la circular definitiva: confírmala antes de planificar.');
+    if (reg === 'general' && anio >= 2027) supuestos.push('Tasa del régimen general según la Ley 21.850 (rebaja gradual a 23%); el SII tiene en consulta pública la circular que la instruye.');
     if (reg === 'propyme' && anio >= 2025 && anio <= 2028) supuestos.push('La tasa rebajada requiere que, al cierre del año, la cotización del empleador de la Ley 21.735 sea la que indica la ley (la Circular 53/2025 la da por cumplida hasta 2028).');
     return { texto: [...lineas, ...(supuestos.length ? [`Supuse: ${supuestos.join(' ')}`] : []), fuente(`${normativa().idpc.fuente}; ${normativa().factorCredito.fuente}`)].join('\n'), acciones: [] };
   }

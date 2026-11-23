@@ -10,12 +10,14 @@ import { montoDe } from './asientosAyuda';
 import { esTributaria } from './tributario';
 import { normativa, retencionHonorarios, ppmMinimo } from './normativa';
 import { jerga, pideDefinicion, esTerminoSuelto } from './vocabulario';
+import { pideBusqueda, type Doc } from './buscador';
 
 export type Vista = 'inicio' | 'cargar' | 'clasificar' | 'documentos' | 'iva' | 'personal' | 'banco' | 'contabilidad' | 'noticias';
 export type Accion =
   | { tipo: 'ir'; etiqueta: string; vista: Vista; pestana?: string }
   | { tipo: 'arreglar'; etiqueta: string; arreglo: Arreglo; explica: string }
-  | { tipo: 'recorrido'; etiqueta: string };
+  | { tipo: 'recorrido'; etiqueta: string }
+  | { tipo: 'ia'; etiqueta: string; pregunta: string; contexto?: string };
 export interface Respuesta { texto: string; acciones: Accion[] }
 
 // ------------------------------------------------------------------ ayuda ("¿cómo hago…?")
@@ -45,6 +47,9 @@ const TEMAS: Tema[] = [
   { claves: 'datos privacidad seguro internet servidor donde guarda', texto: 'Todo queda en este navegador (IndexedDB). La app no envía tus datos a ningún servidor; este asistente tampoco: responde con la ayuda de la propia app.', acciones: [] },
   { claves: 'como funciona ayuda recorrido tutorial aprender explicar', texto: 'El recorrido "¿Cómo funciona?" marca cada parte de la pantalla y la explica paso a paso.', acciones: [{ tipo: 'recorrido', etiqueta: 'Empezar el recorrido' }] },
 ];
+
+/** La ayuda de la app como documentos para el buscador. */
+export const temasAyuda = (): Doc[] => TEMAS.map(t => ({ tipo: 'ayuda', titulo: 'Ayuda de la app', texto: t.texto, claves: t.claves }));
 
 const STOP = new Set('como hago puedo para que donde esta los las el la un una de del en y o a se me mi mis por con hay es son lo al cuando quiero necesito ver'.split(' '));
 const tokens = (s: string) => jerga(s).trim().split(' ').filter(w => w.length > 2 && !STOP.has(w));
@@ -129,13 +134,14 @@ export const SALUDO: Respuesta = {
 };
 
 /** Responde una pregunta. Las órdenes "revisar" y "qué falta" se resuelven en la pantalla (necesitan los datos). */
-export function intencion(pregunta: string): 'tributaria' | 'glosario' | 'noticias' | 'asiento' | 'normativa' | 'revisar' | 'falta' | 'ayuda' {
+export function intencion(pregunta: string): 'tributaria' | 'glosario' | 'noticias' | 'buscar' | 'asiento' | 'normativa' | 'revisar' | 'falta' | 'ayuda' {
   const t = jerga(pregunta);
   const monto = montoDe(pregunta);
   // "¿qué es el CF?", "¿cuándo vence la 29?", "las DJ": definición antes que cálculo (salvo que traiga un monto para calcular)
   if ((pideDefinicion(pregunta) || esTerminoSuelto(pregunta)) && !(monto !== null && esTributaria(pregunta))) return 'glosario';
   if (esTributaria(pregunta)) return 'tributaria';
   if (/\b(noticias?|circular(es)?|resolucion(es)?|que (publico|publicó|saco) el sii|novedades del sii)\b/.test(t)) return 'noticias';
+  if (pideBusqueda(pregunta)) return 'buscar';             // "¿qué cambia la reforma para las 14 A?"
   if (/\b(asiento|contabiliz\w*|registr\w*|deprecia\w*|vend\w*|venta|compr\w*|pague|gaste|aporte|retir\w*|prestamo|honorarios?|arriendo)\b/.test(t) && (montoDe(pregunta) !== null || /\bdeprecia/.test(t)) && !/\bcomo (cargo|hago|se)\b/.test(t)) return 'asiento';
   if (/\b(normativa|ley(es)?|tasa|tasas|utm|novedad\w*|cambio\w* tributari\w*|sii)\b/.test(t) && !/\bcomo (cargo|hago)\b/.test(t)) return 'normativa';
   if (/\b(revis\w*|error(es)?|problema\w*|mal|arregl\w*|corregi\w*|falla\w*|diagnost\w*)\b/.test(t)) return 'revisar';
