@@ -26,7 +26,7 @@ export default function PorClasificar({ empresa, movs, docs, reglas, cfg, onCamb
   const [ver, setVer] = useState(60);
   const pendientes = useMemo(() => movs.filter(m => m.estado === 'pendiente').sort((a, b) => b.fecha.localeCompare(a.fecha)), [movs]);
   const clasificados = useMemo(() => movs.filter(m => m.estado === 'clasificado'), [movs]);
-  const propMov = useMemo(() => new Map(pendientes.map(m => [m.clave, sugerirMovimiento(m, { clasificados })] as const).filter((x): x is [string, Propuesta] => !!x[1])), [pendientes, clasificados]);
+  const propMov = useMemo(() => new Map(pendientes.map(m => [m.clave, sugerirMovimiento(m, { clasificados, rutEmpresa: empresa.rut, razonSocial: empresa.razonSocial, docs })] as const).filter((x): x is [string, Propuesta] => !!x[1])), [pendientes, clasificados, empresa, docs]);
   const categoriasPlan = useMemo(() => [...new Set(cfg.plan.map(c => c.categoria).filter((c): c is string => !!c))], [cfg.plan]);
   const sinCat = useMemo(() => proveedoresSinCategoria(docs, cfg.provCategoria, empresa.rut), [docs, cfg.provCategoria, empresa.rut]);
   const propProv = useMemo(() => sugerenciasProveedores(sinCat, docs, cfg.provCategoria, categoriasPlan, empresa.razonSocial), [sinCat, docs, cfg.provCategoria, categoriasPlan, empresa.razonSocial]);

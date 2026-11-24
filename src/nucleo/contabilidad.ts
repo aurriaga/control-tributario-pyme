@@ -45,6 +45,8 @@ export const CATEGORIAS_GASTO: { categoria: string; descripcion: string; grupo: 
   { categoria: 'Subcontratos e instalación', descripcion: 'Trabajos de terceros en las obras', grupo: 'Costo de ventas' },
   { categoria: 'Fletes y despacho', descripcion: 'Transporte de materiales y despachos', grupo: 'Costo de ventas' },
   { categoria: 'Comisiones de ventas', descripcion: 'Comisión de ferias y consignatarios (liquidaciones-factura)', grupo: 'Costo de ventas' },
+  { categoria: 'Ganado y animales', descripcion: 'Animales comprados para crianza, engorda o venta', grupo: 'Costo de ventas' },
+  { categoria: 'Insumos agrícolas y veterinarios', descripcion: 'Fertilizantes, semillas, forraje, medicamentos y servicios veterinarios', grupo: 'Costo de ventas' },
   { categoria: 'Arriendos', descripcion: 'Local, bodega, oficina o equipos', grupo: 'Gastos de administración y ventas' },
   { categoria: 'Servicios básicos', descripcion: 'Luz, agua, gas, telefonía, internet', grupo: 'Gastos de administración y ventas' },
   { categoria: 'Servicios profesionales', descripcion: 'Contabilidad, asesorías, prevención, capacitación', grupo: 'Gastos de administración y ventas' },
@@ -81,7 +83,8 @@ export const PLAN_BASE: Cuenta[] = [
   cta(4101, 'Ventas', 'Ingreso', { grupo: 'Ingresos' }), cta(4103, 'Otros ingresos', 'Ingreso', { grupo: 'Otros ingresos' }),
   gasto(5101, 'Materiales e insumos del giro', 'Costo de ventas'), gasto(5102, 'Insumos y herramientas', 'Costo de ventas'),
   gasto(5103, 'Subcontratos e instalación', 'Costo de ventas'), gasto(5104, 'Fletes y despacho', 'Costo de ventas'),
-  gasto(5105, 'Comisiones de ventas', 'Costo de ventas'),
+  gasto(5105, 'Comisiones de ventas', 'Costo de ventas'), gasto(5106, 'Ganado y animales', 'Costo de ventas'),
+  gasto(5107, 'Insumos agrícolas y veterinarios', 'Costo de ventas'),
   gasto(5201, 'Arriendos', 'Gastos de administración y ventas'), gasto(5202, 'Servicios básicos', 'Gastos de administración y ventas'),
   gasto(5203, 'Servicios profesionales', 'Gastos de administración y ventas'), gasto(5204, 'Computación y software', 'Gastos de administración y ventas'),
   gasto(5205, 'Vehículos y mantención', 'Gastos de administración y ventas'), gasto(5206, 'Combustibles y lubricantes', 'Gastos de administración y ventas'),
@@ -157,8 +160,31 @@ export interface ConfigContable {
 /** Agrega al plan guardado las cuentas de la app que se crearon después (por ejemplo 5105 Comisiones de ventas). */
 export function completarPlan(cfg: ConfigContable): ConfigContable {
   const usados = new Set(cfg.plan.map(c => c.codigo));
-  const faltan = PLAN_BASE.filter(c => !usados.has(c.codigo) && c.codigo === C.COMISIONES);
+  const nuevas = new Set([5105, 5106, 5107]);            // cuentas agregadas al plan de la app después de su primera versión
+  const faltan = PLAN_BASE.filter(c => !usados.has(c.codigo) && nuevas.has(c.codigo));
   return faltan.length ? { ...cfg, plan: ordenarPlan([...cfg.plan, ...faltan]) } : cfg;
+}
+
+/** Una cuenta contable por cada cuenta bancaria de las cartolas: la primera usa 1102; las otras, códigos libres desde 1111.
+ *  Así cada banco tiene su mayor y la apertura y el control "Banco = cartola" van por cuenta. Devuelve la misma
+ *  configuración si no falta ninguna. */
+export function cuentasBancarias(movs: Movimiento[], cfg: ConfigContable): ConfigContable {
+  const dig = (s: string) => s.replace(/\D/g, '');
+  const cuentas = new Map<string, string>();
+  for (const m of movs) if (dig(m.cuenta).length >= 6 && !cuentas.has(dig(m.cuenta))) cuentas.set(dig(m.cuenta), `${m.banco ? m.banco + ' ' : ''}${m.cuenta}`);
+  const conNumero = cfg.plan.filter(c => dig(c.cuentaBancaria ?? '').length >= 6);
+  const falta = [...cuentas].filter(([d]) => !conNumero.some(c => d.includes(dig(c.cuentaBancaria!)) || dig(c.cuentaBancaria!).includes(d)));
+  if (!falta.length || cuentas.size < 2) return cfg;            // con una sola cuenta, 1102 ya basta
+  let plan = [...cfg.plan];
+  const usados = new Set(plan.map(c => c.codigo));
+  for (const [d, nombre] of falta) {
+    const base = plan.find(c => c.codigo === C.BANCO);
+    if (base && !dig(base.cuentaBancaria ?? '')) { plan = plan.map(c => (c.codigo === C.BANCO ? { ...c, nombre: `Banco ${nombre}`, cuentaBancaria: d } : c)); continue; }
+    let cod = 1111; while (usados.has(cod) && cod < 1197) cod++;
+    usados.add(cod);
+    plan.push({ codigo: cod, nombre: `Banco ${nombre}`, tipo: 'Activo', cuentaBancaria: d });
+  }
+  return { ...cfg, plan: ordenarPlan(plan) };
 }
 
 /** Usa un Libro Diario importado: suma su plan (sin tocar las cuentas de la app) y guarda sus líneas. */

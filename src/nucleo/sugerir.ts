@@ -3,7 +3,7 @@
 // clasificados). Son propuestas: el usuario siempre confirma.
 import type { Documento } from './rcv';
 import type { Movimiento } from './cartola';
-import { rutsConDV, patronDe } from './cruce';
+import { rutsConDV, patronDe, nombraEmpresa } from './cruce';
 
 export interface Propuesta { categoria: string; motivo: string; fuerza: 'alta' | 'media' }
 
@@ -13,6 +13,8 @@ export const texto = (s: string) => ' ' + s.toLowerCase().normalize('NFD').repla
 // Palabras clave del nombre del proveedor → categoría de gasto. El orden importa: gana la primera que calza
 // (por ejemplo, "Zurich Santander Seguros" es un seguro antes que un banco).
 const PROVEEDOR: [string, RegExp][] = [
+  ['Ganado y animales', /\b(ferias? ganader\w*|ganader\w*|ganado|remates? (de )?ganado|feria de animales|agropecuaria de remates)\b/],
+  ['Insumos agrícolas y veterinarios', /\b(fertiliz\w*|agricolas?|agroservicios?|agroinsumos?|agropecuari\w*|silvoagropecuari\w*|semillas?|veterinari\w*|forrajes?|nutricion animal|vivero\w*|cooperativa agricola|agroquimic\w*|riego)\b/],
   ['Seguros', /\b(seguros?|aseguradora|hdi|zurich|mapfre|sura|suramericana|zenit|liberty|consorcio nacional|chilena consolidada|reale)\b/],
   ['Peajes y autopistas', /\b(autopista|concesionaria|soc conc|costanera|vespucio|peajes?|tag|operadora de sistemas electronicos|ruta del)\b|\bruta \d/],
   ['Combustibles y lubricantes', /\b(combustibles?|petroleos?|copec|esmax|shell|enex|aramco|terpel|petrobras|lubricantes?|est serv|estacion de servicio|servicentro)\b/],
@@ -69,9 +71,18 @@ const GLOSA: [string, 'cargo' | 'abono' | 'ambos', RegExp][] = [
   ['Traspaso entre cuentas propias', 'ambos', /\b(traspaso|entre cuentas|cuenta propia|cta propia|fondos mutuos|deposito a plazo|rescate fondo)\b/],
   ['Otro gasto sin factura', 'cargo', /\b(seguro|seguros|pac seguro)\b/],
   ['Otro ingreso', 'abono', /\b(intereses ganados|interes ganado|reembolso|devolucion)\b/],
+  // La venta de divisas suele ser el cobro de una exportación (el cliente paga en dólares y el banco los cambia)
+  ['Cobro a cliente', 'abono', /\b(venta de divisas|liquidacion de divisas|cambio de divisas|compra venta de divisas)\b/],
+  // Compras con tarjeta en comercios: casi siempre con boleta (sin crédito fiscal)
+  ['Otro gasto sin factura', 'cargo', /\b(redcompra|compra nacional|compra internacional|compra web|pago tarjeta debito)\b/],
 ];
 
-export interface ContextoMov { clasificados: Movimiento[] }
+export interface ContextoMov { clasificados: Movimiento[]; rutEmpresa?: string; razonSocial?: string; docs?: Documento[] }
+
+const diaDe = (iso: string) => Date.UTC(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)) - 1, Number(iso.slice(8, 10))) / 86400000;
+/** Factura de compra pendiente por el mismo total, emitida hasta 30 días antes del cargo (el pago con tarjeta de una factura). */
+const facturaDelMonto = (m: Movimiento, docs: Documento[] = []) => docs.find(d => d.libro === 'COMPRA' && d.estado === 'POR PAGAR' && Math.abs(d.total - m.cargo) < 1
+  && diaDe(m.fecha) - diaDe(d.fechaEmision) >= 0 && diaDe(m.fecha) - diaDe(d.fechaEmision) <= 30);
 
 /** Qué es un movimiento del banco: primero lo que el usuario ya decidió para el mismo RUT o la misma glosa; después,
  *  palabras clave de la glosa. */
@@ -89,11 +100,18 @@ export function sugerirMovimiento(m: Movimiento, ctx: ContextoMov): Propuesta | 
   const igualGlosa = ruts.length ? [] : mismos.filter(x => !rutsConDV(x.descripcion).length && patronDe(x.descripcion) === p);
   if (igualGlosa.length && new Set(igualGlosa.map(x => x.categoria)).size === 1)
     return { categoria: igualGlosa[0].categoria!, motivo: `Ya clasificaste ${igualGlosa.length} movimiento${igualGlosa.length > 1 ? 's' : ''} con la misma glosa así.`, fuerza: 'alta' };
+  // La glosa nombra a la propia empresa (sin el RUT de un tercero): plata que va o viene de otra cuenta propia
+  if (ctx.rutEmpresa && nombraEmpresa(m.descripcion, ctx.rutEmpresa, ctx.razonSocial) && !ruts.some(r => r !== String(Number(ctx.rutEmpresa!.replace(/\./g, '').split('-')[0]))))
+    return { categoria: 'Traspaso entre cuentas propias', motivo: 'La glosa nombra a tu propia empresa: parece plata que va o viene de otra cuenta tuya.', fuerza: 'media' };
   const t = texto(m.descripcion);
   for (const [cat, l, re] of GLOSA) {
     if (l !== 'ambos' && l !== lado) continue;
     const r = t.match(re);
-    if (r) return { categoria: cat, motivo: `La glosa dice "${r[0].trim().toUpperCase()}".`, fuerza: 'media' };
+    if (r && cat === 'Otro gasto sin factura' && lado === 'cargo') {
+      const f = facturaDelMonto(m, ctx.docs);
+      if (f) return null;     // hay una factura por el mismo monto: es un pago a proveedor, que se asocia en "Asociar a facturas"
+    }
+    if (r) return { categoria: cat, motivo: `La glosa dice "${r[0].trim().toUpperCase()}".${cat === 'Cobro a cliente' ? ' Suele ser el cobro de una exportación: asócialo a la factura si la reconoces.' : cat === 'Otro gasto sin factura' ? ' Si la compra tiene factura, asóciala en vez de esto.' : ''}`, fuerza: 'media' };
   }
   return null;
 }

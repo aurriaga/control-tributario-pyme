@@ -14,7 +14,7 @@ import PanelPersonal from './PanelPersonal';
 import type { LibroRemuneraciones, MesHonorarios } from './nucleo/remuneraciones';
 import { pesos } from './formato';
 import PanelContabilidad from './PanelContabilidad';
-import { configInicial, completarPlan, usarLibro, type ConfigContable } from './nucleo/contabilidad';
+import { configInicial, completarPlan, usarLibro, cuentasBancarias, type ConfigContable } from './nucleo/contabilidad';
 import { anularDocumento, reactivarDocumento } from './nucleo/rcv';
 import PanelMes from './PanelMes';
 import { panelMes, mesesConDatos, crearRespaldo, leerRespaldo } from './nucleo/panel';
@@ -92,6 +92,8 @@ export default function App() {
     setSinGuardar(!ok);
   }, [docs, f29s, movs, reglas, libros, honorarios, conta, utm]);
 
+  // Con dos o más bancos, cada cuenta de las cartolas tiene su cuenta contable (se crea sola la primera vez)
+  useEffect(() => { setConta(c => cuentasBancarias(movs, c)); }, [movs]);
   const controles = useMemo(() => (empresa ? controlesGenerales({ empresa: empresa.rut, docs, f29s, movs, libros, honorarios, utm }, conta) : []), [empresa, docs, f29s, movs, libros, honorarios, utm, conta]);
   const meses = useMemo(() => mesesConDatos(docs, f29s, movs, libros), [docs, f29s, movs, libros]);
   const calcularMes = useCallback((p: string) => panelMes(p, docs, f29s, movs, libros, { comisionLF: conta.ivaComisionLF }), [docs, f29s, movs, libros, conta.ivaComisionLF]);
@@ -285,7 +287,7 @@ export default function App() {
           onBorrar={() => { if (confirm('¿Borrar los libros de remuneraciones y los honorarios cargados?')) { setLibros([]); setHonorarios([]); } }} />
           : sinDatos('Carga los libros de remuneraciones de cada mes y el informe de boletas de honorarios del SII.'))}
 
-        {vista === 'banco' && (movs.length > 0 ? <PanelBanco movs={movs} docs={docs} f29s={f29s} reglas={reglas} libros={libros} rutEmpresa={empresa.rut}
+        {vista === 'banco' && (movs.length > 0 ? <PanelBanco movs={movs} docs={docs} f29s={f29s} reglas={reglas} libros={libros} rutEmpresa={empresa.rut} razonSocial={empresa.razonSocial}
           onIrClasificar={() => ir('clasificar')}
           onCambio={(m, d, r) => { setMovs(m); if (d) setDocs(d); if (r) setReglas(r); }}
           onBorrar={() => { if (confirm('¿Borrar los movimientos del banco y las reglas? Las facturas marcadas como pagadas o cobradas vuelven a quedar pendientes.')) {

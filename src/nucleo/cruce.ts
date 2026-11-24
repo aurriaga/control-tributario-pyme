@@ -252,14 +252,46 @@ export function reaplicarReglas(movs: Movimiento[], reglas: Regla[]): Movimiento
 
 /** Clasifica los movimientos pendientes: pagos de F29 detectados por el cruce, pagos al personal (cargos con el RUT de un
  *  trabajador de los libros de remuneraciones o a PREVIRED) y los que calzan con una regla aprendida. */
-export function clasificar(movs: Movimiento[], reglas: Regla[], pagosF29: string[] = [], trabajadores: Set<string> = new Set()): Movimiento[] {
-  const f29 = new Set(pagosF29);
+export function clasificar(movs: Movimiento[], reglas: Regla[], pagosF29: string[] = [], trabajadores: Set<string> = new Set(), traspasos: string[] = []): Movimiento[] {
+  const f29 = new Set(pagosF29), tras = new Set(traspasos);
   return movs.map(m => {
     if (m.estado !== 'pendiente') return m;
     if (f29.has(m.clave)) return { ...m, estado: 'clasificado' as const, categoria: 'Pago de impuestos (F29)', regla: 'F29' };
+    if (tras.has(m.clave)) return { ...m, estado: 'clasificado' as const, categoria: 'Traspaso entre cuentas propias', regla: 'Traspaso' };
     if (m.cargo > 0 && (/previred/i.test(m.descripcion) || rutsConDV(m.descripcion).some(c => trabajadores.has(c))))
       return { ...m, estado: 'clasificado' as const, categoria: 'Remuneraciones y cotizaciones', regla: 'Personal' };
     const r = reglas.find(x => coincideRegla(m, x));
     return r ? { ...m, estado: 'clasificado' as const, categoria: r.categoria, regla: r.id } : m;
   });
+}
+
+/** ¿La glosa nombra a la propia empresa (su RUT o al menos dos palabras de su razón social)? */
+export function nombraEmpresa(desc: string, rutEmpresa: string, razonSocial = ''): boolean {
+  const cuerpo = cuerpoDe(rutEmpresa);
+  if (cuerpo && rutsEnTexto(desc).includes(cuerpo)) return true;
+  const propias = palabras(razonSocial).filter(p => p.length >= 4 && !GENERICAS.has(p) && !['spa', 'ltda', 'eirl'].includes(p));
+  const g = new Set(palabras(desc));
+  return propias.length > 0 && propias.filter(p => g.has(p)).length >= Math.min(2, propias.length);
+}
+
+/** Traspasos entre cuentas propias: un cargo en una cuenta y un abono por el mismo monto en otra cuenta de la empresa,
+ *  el mismo día o al día siguiente. Para no confundirlo con un pago y un cobro que coinciden, al menos una de las dos
+ *  glosas tiene que nombrar a la empresa o decir "traspaso". Devuelve las claves de ambos movimientos. */
+export function traspasosPropios(movs: Movimiento[], rutEmpresa: string, razonSocial = ''): string[] {
+  const pend = movs.filter(m => m.estado === 'pendiente' && m.fecha && m.cuenta);
+  const abonos = pend.filter(m => m.abono > 0 && !m.cargo);
+  const usados = new Set<string>(), res: string[] = [];
+  const indica = (m: Movimiento) => nombraEmpresa(m.descripcion, rutEmpresa, razonSocial) || /\b(traspasos?|entre cuentas|cuenta propia|cta propia)\b/i.test(m.descripcion);
+  // Un movimiento con el RUT de otra persona o empresa no es un traspaso propio
+  const propio = cuerpoDe(rutEmpresa);
+  const deTercero = (m: Movimiento) => rutsConDV(m.descripcion).some(r => r !== propio);
+  for (const c of pend.filter(m => m.cargo > 0 && !m.abono && !deTercero(m)).sort((a, b) => a.fecha.localeCompare(b.fecha))) {
+    const cand = abonos.filter(a => !usados.has(a.clave) && a.cuenta !== c.cuenta && Math.abs(a.abono - c.cargo) < 0.5 && !deTercero(a)
+      && dia(a.fecha) - dia(c.fecha) >= 0 && dia(a.fecha) - dia(c.fecha) <= 1 && (indica(a) || indica(c)));
+    // el mismo día y con ambas glosas que nombran a la empresa, primero
+    const par = cand.sort((x, y) => (dia(x.fecha) - dia(y.fecha)) || (Number(indica(y)) - Number(indica(x))))[0];
+    if (!par) continue;
+    usados.add(par.clave); res.push(c.clave, par.clave);
+  }
+  return res;
 }

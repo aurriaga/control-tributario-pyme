@@ -2,13 +2,13 @@ import { useMemo, useState } from 'react';
 import type { Documento } from './nucleo/rcv';
 import type { Movimiento } from './nucleo/cartola';
 import type { F29 } from './nucleo/f29';
-import { sugerirCruces, aplicarCruces, clasificar, reaplicarReglas, CATEGORIAS, type Regla, type Sugerencia, type Confianza } from './nucleo/cruce';
+import { sugerirCruces, aplicarCruces, clasificar, traspasosPropios, reaplicarReglas, CATEGORIAS, type Regla, type Sugerencia, type Confianza } from './nucleo/cruce';
 import { periodoLegible } from './nucleo/lector';
 import { pesos } from './formato';
 import { cuerposTrabajadores, type LibroRemuneraciones } from './nucleo/remuneraciones';
 
 interface Props {
-  movs: Movimiento[]; docs: Documento[]; f29s: F29[]; reglas: Regla[]; libros: LibroRemuneraciones[]; rutEmpresa: string;
+  movs: Movimiento[]; docs: Documento[]; f29s: F29[]; reglas: Regla[]; libros: LibroRemuneraciones[]; rutEmpresa: string; razonSocial?: string;
   onIrClasificar: () => void;
   onCambio: (movs: Movimiento[], docs?: Documento[], reglas?: Regla[]) => void;
   onBorrar: () => void;
@@ -17,7 +17,7 @@ const CLASE: Record<Confianza, string> = { Alta: 'verde', Media: 'anil', Baja: '
 const fechaCorta = (iso: string) => `${iso.slice(8, 10)}-${iso.slice(5, 7)}-${iso.slice(0, 4)}`;
 const montoMov = (m: Movimiento) => <span className={m.cargo ? 'neg' : 'pos'}>{pesos(m.abono - m.cargo)}</span>;
 
-export default function PanelBanco({ movs, docs, f29s, reglas, libros, rutEmpresa, onIrClasificar, onCambio, onBorrar }: Props) {
+export default function PanelBanco({ movs, docs, f29s, reglas, libros, rutEmpresa, razonSocial = '', onIrClasificar, onCambio, onBorrar }: Props) {
   const [sugerencias, setSugerencias] = useState<Sugerencia[] | null>(null);
   const [decision, setDecision] = useState<Record<string, 'Aceptar' | 'Rechazar'>>({});
   const [verTodos, setVerTodos] = useState(false);
@@ -37,7 +37,8 @@ export default function PanelBanco({ movs, docs, f29s, reglas, libros, rutEmpres
 
   function buscar() {
     const r = sugerirCruces(movs, docs, f29s, rutEmpresa);
-    const conReglas = clasificar(movs, reglas, r.pagosF29, cuerposTrabajadores(libros));   // F29, pagos al personal y reglas aprendidas se clasifican solos
+    // F29, traspasos entre cuentas propias, pagos al personal y reglas aprendidas se clasifican solos
+    const conReglas = clasificar(movs, reglas, r.pagosF29, cuerposTrabajadores(libros), traspasosPropios(movs, rutEmpresa, razonSocial));
     const cambiaron = conReglas.some((m, i) => m !== movs[i]);
     if (cambiaron) onCambio(conReglas);
     setSugerencias(r.sugerencias.filter(s => conReglas.find(m => m.clave === s.movimiento)?.estado === 'pendiente'));

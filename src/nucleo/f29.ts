@@ -142,6 +142,9 @@ export function borradorF29(docs: Documento[], f29s: F29[], periodo: string, utm
   const iva089 = Math.max(0, t.debito - t.credito - rem504), rem077 = Math.max(0, t.credito + rem504 - t.debito);
   const ppm = tasa === null ? 0 : Math.round(t.base * tasa);
   const d = (k: string) => (decl ? decl.codigos[k] ?? null : null);
+  // Sin libro de remuneraciones o informe de honorarios: lo declarado en el último F29 sirve de referencia
+  const ultimoCon = (k: string) => [...porPer.values()].filter(f => f.periodo < periodo && (f.codigos[k] ?? 0) > 0).sort((a, b) => b.periodo.localeCompare(a.periodo))[0];
+  const referencia = (k: string, falta: string) => { const f = ultimoCon(k); return f ? `${falta} Referencia: en el F29 de ${f.periodo} declaraste $${Math.round(f.codigos[k]).toLocaleString('de-DE')}.` : falta; };
   const lineas: LineaBorrador[] = [
     { codigo: '538', concepto: 'Débito fiscal', borrador: t.debito, declarado: d('538') },
     { codigo: '520-528', concepto: 'Crédito fiscal del mes', borrador: t.credito, declarado: decl ? (d('520') ?? 0) - (d('528') ?? 0) : null },
@@ -151,9 +154,9 @@ export function borradorF29(docs: Documento[], f29s: F29[], periodo: string, utm
     { codigo: '563', concepto: 'Base del PPM (ventas netas del mes)', borrador: t.base, declarado: d('563') },
     { codigo: '062', concepto: `PPM${tasa !== null ? ` (tasa ${(tasa * 100).toLocaleString('es-CL', { maximumFractionDigits: 3 })}%)` : ''}`, borrador: ppm, declarado: d('062'), total: true },
     { codigo: '151', concepto: 'Retención de honorarios', borrador: personal?.retencionHonorarios ?? null, declarado: d('151'),
-      nota: personal?.retencionHonorarios == null ? 'Carga el informe de boletas de honorarios recibidas del SII.' : undefined },
+      nota: personal?.retencionHonorarios == null ? referencia('151', 'Carga el informe de boletas de honorarios recibidas del SII.') : undefined },
     { codigo: '048', concepto: 'Impuesto único de trabajadores', borrador: personal?.impuestoUnico ?? null, declarado: d('048'),
-      nota: personal?.impuestoUnico == null ? 'Carga el libro de remuneraciones del mes.' : undefined },
+      nota: personal?.impuestoUnico == null ? referencia('048', 'Carga el libro de remuneraciones del mes.') : undefined },
     { codigo: '91', concepto: 'Total a pagar (estimado)', borrador: iva089 + ppm + (personal?.retencionHonorarios ?? 0) + (personal?.impuestoUnico ?? 0), declarado: d('91'), total: true },
   ];
   const [y, m] = mesVecino(periodo, 1).split('-');
