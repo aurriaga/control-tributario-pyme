@@ -80,3 +80,30 @@ describe('borrador del F29 sin libro de remuneraciones ni honorarios', () => {
     expect(b.lineas.find(l => l.codigo === '151')!.nota).toMatch(/\$15\.250/);
   });
 });
+
+describe('pagos con tarjeta y nombre del banco', () => {
+  const factura = (folio: number, razonSocial: string, rut: string, total: number, fechaEmision: string): Documento => ({ libro: 'COMPRA', clave: `${rut}|33|${folio}`, empresa: EMP, tipoDoc: 33, folio,
+    fechaEmision, fechaRecepcion: null, rutContraparte: rut, razonSocial, exento: 0, neto: Math.round(total / 1.19), iva: total - Math.round(total / 1.19), ivaNoRecuperable: 0,
+    otrosImpuestos: 0, total, plazoDias: 30, estado: 'POR PAGAR', origen: 'prueba', observacion: '', periodoRCV: fechaEmision.slice(0, 7) });
+  it('la marca de la estación (SHELL) se reconoce en la factura de quien la opera (ENEX)', async () => {
+    const { sugerirCruces } = await import('./cruce');
+    const docs = [factura(10, 'COMBUSTIBLES ENEX DE PRUEBA S.A.', '96.111.222-0', 30000, '2026-01-20'), factura(11, 'OTRA EMPRESA', '96.333.444-0', 30000, '2026-01-02')];
+    const s = sugerirCruces([mov('1', '2026-01-21', -30000, 'REDCOMPRA SHELL.SUCURSAL')], docs, [], EMP).sugerencias[0];
+    expect([s.confianza, s.docs]).toEqual(['Alta', [docs[0].clave]]);
+    expect(s.motivo).toMatch(/lo factura ENEX/);
+  });
+  it('si el comercio de la glosa no calza, se busca la factura por monto', async () => {
+    const { sugerirCruces } = await import('./cruce');
+    const docs = [factura(20, 'COMBUSTIBLES ENEX DE PRUEBA S.A.', '96.111.222-0', 99999, '2026-02-01'), factura(21, 'DISTRIBUIDOR LOCAL', '96.555.666-0', 41230, '2026-02-09')];
+    const s = sugerirCruces([mov('1', '2026-02-10', -41230, 'REDCOMPRA SHELL.SUCURSAL')], docs, [], EMP).sugerencias[0];
+    expect([s.confianza, s.docs]).toEqual(['Media', [docs[1].clave]]);
+    expect(s.motivo).toMatch(/Pago con tarjeta/);
+  });
+  it('la cartola histórica del Banco de Chile se reconoce aunque no diga el nombre del banco', async () => {
+    const { clasificar: clasificarDoc } = await import('./clasificar');
+    const filas = [['Cartolas históricas de Cuentas'], ['Empresa:', 'EMPRESA DE PRUEBA SPA'], ['Cuenta Corriente N°: 0-000-1234567-8', '', 'Moneda: PESOS DE CHILE'],
+      ['Fecha', 'Descripción', 'Cargos (CLP)', 'Abonos (CLP)', 'Saldo (CLP)'], ['02/01/2026', 'TRASPASO', '1000', '', '5000']];
+    const c = { formato: 'planilla' as const, texto: filas.map(f => f.join(';')).join('\n'), hojas: [{ nombre: 'Cartola Historica CtaCte', filas }], ocr: false };
+    expect(clasificarDoc('CartolaHistCtaCte-1.xlsx', c)).toMatchObject({ tipo: 'CARTOLA', banco: 'Banco de Chile' });
+  });
+});

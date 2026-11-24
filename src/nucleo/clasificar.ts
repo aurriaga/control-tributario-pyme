@@ -98,7 +98,10 @@ export function clasificar(nombre: string, c: Contenido): Clasificacion {
   const columnasBanco = cabTiene('saldo') && cabTiene('cargo', 'abono', 'debe', 'haber', 'monto', 'deposito', 'giro') && !enCabeza('librodiario');
   const movimientos = (c.texto.match(/^\s*\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b.*\d[\d.,]{2,}/gm) ?? []).length;
   if (columnasBanco || (enCabeza('cartola') && (movimientos >= 2 || c.formato === 'planilla'))) {
-    const banco = BANCOS.find(([re]) => re.test(cabeza) || re.test(normalizar(nombre)))?.[1] ?? '';
+    // La "Cartola histórica" del Banco de Chile no dice el nombre del banco: se reconoce por su título y por el formato
+    // de su número de cuenta (0-000-0000000-0)
+    const historicaBancoChile = enCabeza('cartolashistoricasdecuentas') && /cuenta corriente n\S*\s*0-000-\d{7}-[\dk]/i.test(c.texto.slice(0, 3000));
+    const banco = BANCOS.find(([re]) => re.test(cabeza) || re.test(normalizar(nombre)))?.[1] ?? (historicaBancoChile ? 'Banco de Chile' : '');
     return { ...r('CARTOLA', enCabeza('cartola') && columnasBanco ? 'alta' : 'media', 'Tiene movimientos con fecha, cargos o abonos y saldo, como una cartola.'), banco };
   }
   if (enCabeza('carpetatributaria')) return r('CARPETA_TRIBUTARIA', 'alta', 'Dice "Carpeta Tributaria".');

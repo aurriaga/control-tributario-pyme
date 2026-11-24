@@ -26,6 +26,10 @@ const GENERICAS = new Set(('ltda limitada eirl sociedad compania comercial comer
 const dia = (iso: string) => Date.UTC(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)) - 1, Number(iso.slice(8, 10))) / 86400000;
 export const esNotaCredito = (t: number) => signoDoc(t) < 0;
 const palabras = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').split(/[^a-z0-9]+/).filter(Boolean);
+// Marcas que se ven en la glosa del banco (pago con tarjeta en la estación) y la razón social que emite la factura
+const MARCAS: Record<string, string> = { shell: 'enex', aramco: 'esmax', petrobras: 'esmax' };
+/** Palabras de la glosa más, para cada marca conocida, la palabra de la razón social que la factura. */
+const palabrasConMarca = (s: string) => palabras(s).flatMap(p => [{ glosa: p, razon: p }, ...(MARCAS[p] ? [{ glosa: p, razon: MARCAS[p] }] : [])]);
 const cuerpoDe = (rut: string) => { const s = rut.replace(/[.\s]/g, '').split('-')[0]; return /^\d{1,9}$/.test(s) ? String(Number(s)) : ''; };
 
 function tokensRut(s: string): string[] {
@@ -107,8 +111,8 @@ export function sugerirCruces(movs: Movimiento[], docs: Documento[], f29s: F29[]
     const d = new Map<string, string>();
     for (const cu of rutsEnTexto(m.descripcion)) if (cu !== propio && porCuerpo.has(`${lado}|${cu}`)) d.set(cu, 'RUT en la glosa');
     if (d.size === 0 && rutsConDV(m.descripcion).length) { res.ajenos++; continue; }   // trabajador, socio o cuenta propia
-    if (d.size === 0) for (const p of palabras(m.descripcion)) for (const cu of porPalabra.get(`${lado}|${p}`) ?? []) if (cu !== propio)
-      d.set(cu, d.has(cu) ? `${d.get(cu)}, ${p.toUpperCase()}` : `nombre en la glosa: ${p.toUpperCase()}`);
+    if (d.size === 0) for (const p of palabrasConMarca(m.descripcion)) for (const cu of porPalabra.get(`${lado}|${p.razon}`) ?? []) if (cu !== propio)
+      d.set(cu, d.has(cu) ? `${d.get(cu)}, ${p.glosa.toUpperCase()}` : `nombre en la glosa: ${p.glosa.toUpperCase()}${p.glosa !== p.razon ? ` (lo factura ${p.razon.toUpperCase()})` : ''}`);
     ident.set(m.clave, d); elegibles.push(m);
   }
 
@@ -118,6 +122,8 @@ export function sugerirCruces(movs: Movimiento[], docs: Documento[], f29s: F29[]
     res.sugerencias.push({ movimiento: m.clave, confianza, motivo: pref + motivo, docs: sel.map(a => a.doc.clave), contraparte });
   };
 
+  const esTarjeta = (m: Movimiento) => m.cargo > m.abono && /\b(redcompra|compra (nacional|internacional|web)|pago tarjeta)\b/i.test(m.descripcion);
+  const porMonto = new Set<string>();
   for (const fase of [1, 2]) for (const m of elegibles) {
     const id = ident.get(m.clave)!, monto = Math.abs(m.abono - m.cargo), f = dia(m.fecha), lado = m.abono > m.cargo ? 'V' : 'C';
     if (fase === 1 && id.size > 0) {
@@ -150,17 +156,23 @@ export function sugerirCruces(movs: Movimiento[], docs: Documento[], f29s: F29[]
       if (sols.length) {
         const unica = sols.length === 1 && id.size === 1;
         agregar(m, unica ? 'Alta' : 'Media', unica ? sols[0].motivo : `${sols[0].motivo}. Hay más de una combinación posible: confirma cuál es.`, sols[0].sel);
+      } else if (esTarjeta(m)) {
+        porMonto.add(m.clave);     // el comercio de la glosa puede no ser quien factura: se busca por monto en la fase 2
       } else {
         agregar(m, 'Sin calce', `Se reconoce a ${nombres} (${[...id.values()][0]}), pero el monto no calza con sus documentos abiertos emitidos hasta esa fecha: puede ser un abono parcial, un anticipo o una factura que no está en el registro.`, [], nombres);
       }
-    } else if (fase === 2 && id.size === 0) {
+    } else if (fase === 2 && (id.size === 0 || porMonto.has(m.clave))) {
       const sing = abiertos.filter(a => a.lado === lado && a.saldo > 0 && Math.abs(a.saldo - monto) < 0.5 && disponible(a, f));
       if (!sing.length) continue;
       const mejor = masCercano(sing, f);
-      if (sing.length === 1 && monto <= 100000 && Math.abs(monto - 5000 * Math.round(monto / 5000)) < 0.5)
-        agregar(m, 'Baja', 'La glosa no trae RUT ni nombre y el monto es chico y redondo (puede ser otro pago por la misma cifra); es el único documento abierto por ese monto. Confirma cuál es.', [mejor]);
-      else if (sing.length === 1) agregar(m, 'Media', `La glosa no trae RUT ni nombre; es el único documento abierto por ese monto; ${dias(f - mejor.fec)}`, [mejor]);
-      else agregar(m, 'Baja', `La glosa no trae RUT ni nombre y hay ${sing.length} documentos abiertos por ese monto: se propone el de vencimiento más cercano. Confirma cuál es.`, [mejor]);
+      // Pago con tarjeta: la glosa trae el comercio, no al proveedor; si la factura es de los días previos, es casi seguro
+      const tarjeta = esTarjeta(m);
+      const sinId = tarjeta ? `Pago con tarjeta (la glosa trae el comercio, ${m.descripcion.trim()}, no el RUT del proveedor)` : 'La glosa no trae RUT ni nombre';
+      if (tarjeta && sing.length === 1 && f - mejor.fec <= 3) agregar(m, 'Media', `${sinId}; es la única factura abierta por ese monto y se emitió ${dias(f - mejor.fec)}.`, [mejor]);
+      else if (sing.length === 1 && monto <= 100000 && Math.abs(monto - 5000 * Math.round(monto / 5000)) < 0.5)
+        agregar(m, 'Baja', `${sinId} y el monto es chico y redondo (puede ser otro pago por la misma cifra); es el único documento abierto por ese monto. Confirma cuál es.`, [mejor]);
+      else if (sing.length === 1) agregar(m, 'Media', `${sinId}; es el único documento abierto por ese monto; ${dias(f - mejor.fec)}`, [mejor]);
+      else agregar(m, 'Baja', `${sinId} y hay ${sing.length} documentos abiertos por ese monto: se propone el de vencimiento más cercano. Confirma cuál es.`, [mejor]);
     }
   }
   return res;
