@@ -1,5 +1,5 @@
 // Panel del mes (lo que pasó y lo que falta) y archivo de respaldo del proyecto.
-import type { Documento } from './rcv';
+import { signoDoc, type Documento, type OpcionesIVA } from './rcv';
 import type { Movimiento } from './cartola';
 import { cuadratura, f29PorPeriodo, mesVecino, totalesRCV, type EstadoCuadratura, type F29 } from './f29';
 import { periodoDe } from './resumen';
@@ -22,14 +22,15 @@ export function mesesConDatos(docs: Documento[], f29s: F29[], movs: Movimiento[]
     .filter(p => /^\d{4}-\d{2}$/.test(p)).sort().reverse();
 }
 
-export function panelMes(periodo: string, docs: Documento[], f29s: F29[], movs: Movimiento[], libros: LibroRemuneraciones[]): PanelMes {
+export function panelMes(periodo: string, docs: Documento[], f29s: F29[], movs: Movimiento[], libros: LibroRemuneraciones[], op: OpcionesIVA = {}): PanelMes {
   const vig = docs.filter(d => d.estado !== 'ANULADA');
-  const t = totalesRCV(vig, periodo);
+  const t = totalesRCV(vig, periodo, op);
   const delMes = vig.filter(d => periodoDe(d) === periodo);
-  const signo = (d: Documento) => (d.tipoDoc === 60 || d.tipoDoc === 61 || d.tipoDoc === 112 ? -1 : 1);
-  const neto = (libro: string) => delMes.filter(d => d.libro === libro && !(d.tipoDoc === 40 || d.tipoDoc === 43)).reduce((s, d) => s + signo(d) * (d.neto + d.exento), 0);
+  // Ventas y compras netas con la misma regla del Resumen del año: las liquidaciones-factura de ventas son ventas y la
+  // comisión de la feria (compras 40 y 43) es una compra
+  const neto = (libro: string) => delMes.filter(d => d.libro === libro).reduce((s, d) => s + signoDoc(d.tipoDoc) * (d.neto + d.exento), 0);
   const f = f29PorPeriodo(f29s).get(periodo);
-  const fila = cuadratura(vig, f29s).find(x => x.periodo === periodo);
+  const fila = cuadratura(vig, f29s, op).find(x => x.periodo === periodo);
   const mm = movs.filter(m => m.fecha.startsWith(periodo)).sort((a, b) => a.fecha.localeCompare(b.fecha));
   const libro = libros.find(l => l.periodo === periodo);
   const hayCartolas = movs.length > 0, hayLibros = libros.length > 0;
@@ -45,10 +46,16 @@ export function panelMes(periodo: string, docs: Documento[], f29s: F29[], movs: 
     periodo, ventas: neto('VENTA'), compras: neto('COMPRA'), docsVenta: t.docsVenta, docsCompra: t.docsCompra, ivaDebito: t.debito, ivaCredito: t.credito,
     f29: { cargado: !!f, estado: fila?.estado ?? null, totalPagado: f ? f.codigos['91'] ?? null : null, vence: `${mesVecino(periodo, 1)}-20` },
     banco: { movimientos: mm.length, entra: mm.reduce((s, m) => s + m.abono, 0), sale: mm.reduce((s, m) => s + m.cargo, 0),
-      saldo: [...mm].reverse().find(m => m.saldo !== null)?.saldo ?? null, identificados: mm.filter(m => m.estado !== 'pendiente').length },
+      saldo: saldoCuentas(mm), identificados: mm.filter(m => m.estado !== 'pendiente').length },
     haberes: libro ? libro.trabajadores.reduce((s, x) => s + x.totalHaberes, 0) : null,
     pendientes,
   };
+}
+/** Saldo de fin de mes sumando el último saldo de cada cuenta bancaria (con varias cuentas, no solo la última movida). */
+function saldoCuentas(mm: Movimiento[]): number | null {
+  const ult = new Map<string, number>();
+  for (const m of mm) if (m.saldo !== null) ult.set(m.cuenta, m.saldo);      // mm viene ordenado por fecha
+  return ult.size ? [...ult.values()].reduce((a, b) => a + b, 0) : null;
 }
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const nombreMes = (p: string) => `${MESES[Number(p.slice(5, 7)) - 1]} ${p.slice(0, 4)}`;

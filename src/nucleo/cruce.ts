@@ -5,7 +5,7 @@
 //  - Monto exacto: una factura, 2 a 4 documentos de la misma contraparte (puede incluir notas de crédito) o todo lo que
 //    se le debe. El pago es el mismo día o después de la emisión (máximo 400 días).
 //  - Nada se marca solo: el usuario acepta o rechaza cada sugerencia.
-import type { Documento } from './rcv';
+import { signoDoc, type Documento } from './rcv';
 import type { Movimiento } from './cartola';
 import { rutValido } from './rut';
 import { normalizar } from './texto';
@@ -24,7 +24,6 @@ const GENERICAS = new Set(('ltda limitada eirl sociedad compania comercial comer
   'abono cargo otros para desde cuenta cliente proveedor').split(' '));
 
 const dia = (iso: string) => Date.UTC(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)) - 1, Number(iso.slice(8, 10))) / 86400000;
-const signoDoc = (t: number) => (t === 60 || t === 61 || t === 112 ? -1 : 1);
 export const esNotaCredito = (t: number) => signoDoc(t) < 0;
 const palabras = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').split(/[^a-z0-9]+/).filter(Boolean);
 const cuerpoDe = (rut: string) => { const s = rut.replace(/[.\s]/g, '').split('-')[0]; return /^\d{1,9}$/.test(s) ? String(Number(s)) : ''; };

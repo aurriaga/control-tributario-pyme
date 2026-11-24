@@ -34,6 +34,19 @@ export interface Documento {
 
 /** Un documento anulado no cuenta en el IVA, el F29, el resumen ni la contabilidad, pero se conserva para la trazabilidad. */
 export const vigente = (d: Documento) => d.estado !== 'ANULADA';
+
+/** Signo de un documento en los totales: las notas de crédito (61, 60) y la nota de crédito de exportación (112) restan.
+ *  Es la única regla de signo de la app: el F29, el resumen, el panel, el cruce y la contabilidad la usan. */
+export const signoDoc = (tipo: number) => (tipo === 60 || tipo === 61 || tipo === 112 ? -1 : 1);
+
+/** Liquidación-factura en el registro de compras (40 y 43): es la comisión que cobra el mandatario (feria, consignatario)
+ *  por la venta que hizo a nombre de la empresa. La venta misma viene, con el mismo folio, en el registro de ventas. */
+export const esComisionLF = (d: Pick<Documento, 'libro' | 'tipoDoc'>) => d.libro === 'COMPRA' && (d.tipoDoc === 40 || d.tipoDoc === 43);
+
+/** Cómo declara la empresa el IVA de la comisión de las liquidaciones-factura: como crédito fiscal (es el IVA de un
+ *  servicio que le cobran) o como débito, como lo propone el SII en el F29 (código 501). Lo decide el usuario. */
+export type IvaComisionLF = 'credito' | 'debito';
+export interface OpcionesIVA { comisionLF?: IvaComisionLF }
 const hoyTexto = () => { const f = new Date(); return `${String(f.getDate()).padStart(2, '0')}-${String(f.getMonth() + 1).padStart(2, '0')}-${f.getFullYear()}`; };
 export function anularDocumento(d: Documento, motivo: string, fecha = hoyTexto()): Documento {
   return { ...d, estado: 'ANULADA', observacion: `Anulado el ${fecha}${motivo.trim() ? `: ${motivo.trim()}` : ''}.${d.observacion ? ' ' + d.observacion : ''}` };
@@ -157,7 +170,7 @@ function armarDocumento(libro: Libro, fila: string[], campo: Campo,
     iva = parseMonto(campo(fila, 'montoivarecuperable')) + ivaUC;
     ivaNoRec = parseMonto(campo(fila, 'montoivanorecuperable'));
     if (ivaUC !== 0) obs.push('Incluye IVA de uso común: revisar proporcionalidad.');
-    if (d.tipo === 43 || d.tipo === 40) obs.push('Liquidación-factura recibida: es una venta hecha por un mandatario (feria, consignatario); su neto va a ventas y su IVA al débito del F29, no al crédito.');
+    if (d.tipo === 43 || d.tipo === 40) obs.push('Liquidación-factura recibida: es la comisión que cobra el mandatario (feria, consignatario) por una venta hecha a nombre de la empresa; la venta viene con el mismo folio en el registro de ventas.');
   }
   return {
     libro, clave: d.clave, empresa: d.empresa, tipoDoc: d.tipo, folio: d.folio, fechaEmision: d.fEmi,

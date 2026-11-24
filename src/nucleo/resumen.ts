@@ -1,5 +1,5 @@
 // Resumen del año a partir de lo que esté cargado. Por ahora usa el RCV; crece con cada etapa (F29, banco, contabilidad).
-import type { Documento } from './rcv';
+import { signoDoc, esComisionLF, type Documento, type OpcionesIVA } from './rcv';
 
 export interface Mes { periodo: string; ventas: number; compras: number; ivaDebito: number; ivaCredito: number; docsVenta: number; docsCompra: number }
 export interface Contraparte { rut: string; nombre: string; monto: number; participacion: number }
@@ -15,7 +15,7 @@ export interface ResumenAnual {
   alertas: Alerta[];
 }
 
-const signo = (d: Documento) => (d.tipoDoc === 61 ? -1 : 1);                // nota de crédito resta
+const signo = (d: Documento) => signoDoc(d.tipoDoc);                       // notas de crédito (61, 60, 112) restan
 export const periodoDe = (d: Documento) => d.periodoRCV || d.fechaEmision.slice(0, 7);
 
 export function aniosDisponibles(docs: Documento[]): number[] {
@@ -31,7 +31,7 @@ function ranking(docs: Documento[], total: number): Contraparte[] {
   return [...m.values()].sort((a, b) => b.monto - a.monto).slice(0, 5).map(c => ({ ...c, participacion: total ? c.monto / total : 0 }));
 }
 
-export function resumenAnual(docs: Documento[], anio: number): ResumenAnual {
+export function resumenAnual(docs: Documento[], anio: number, op: OpcionesIVA = {}): ResumenAnual {
   const delAnio = docs.filter(d => d.estado !== 'ANULADA' && periodoDe(d).startsWith(String(anio)));
   const meses: Mes[] = Array.from({ length: 12 }, (_, i) => ({ periodo: `${anio}-${String(i + 1).padStart(2, '0')}`, ventas: 0, compras: 0, ivaDebito: 0, ivaCredito: 0, docsVenta: 0, docsCompra: 0 }));
   for (const d of delAnio) {
@@ -39,6 +39,7 @@ export function resumenAnual(docs: Documento[], anio: number): ResumenAnual {
     if (!m) continue;
     const s = signo(d);
     if (d.libro === 'VENTA') { m.ventas += s * (d.neto + d.exento); m.ivaDebito += s * d.iva; m.docsVenta++; }
+    else if (esComisionLF(d) && op.comisionLF === 'debito') { m.compras += d.neto + d.exento; m.ivaDebito += d.iva; m.docsCompra++; }   // comisión de la feria
     else { m.compras += s * (d.neto + d.exento); m.ivaCredito += s * d.iva; m.docsCompra++; }
   }
   const suma = (k: keyof Mes) => meses.reduce((a, m) => a + (m[k] as number), 0);

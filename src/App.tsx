@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { Documento, Empresa } from './nucleo/rcv';
+import { signoDoc, type Documento, type Empresa } from './nucleo/rcv';
 import { formatearRUT, rutValido } from './nucleo/rut';
 import { leerArchivo, periodoLegible, type ResultadoLectura } from './nucleo/lector';
 import { periodoDe } from './nucleo/resumen';
@@ -14,7 +14,7 @@ import PanelPersonal from './PanelPersonal';
 import type { LibroRemuneraciones, MesHonorarios } from './nucleo/remuneraciones';
 import { pesos } from './formato';
 import PanelContabilidad from './PanelContabilidad';
-import { configInicial, type ConfigContable } from './nucleo/contabilidad';
+import { configInicial, completarPlan, usarLibro, type ConfigContable } from './nucleo/contabilidad';
 import { anularDocumento, reactivarDocumento } from './nucleo/rcv';
 import PanelMes from './PanelMes';
 import { panelMes, mesesConDatos, crearRespaldo, leerRespaldo } from './nucleo/panel';
@@ -63,7 +63,7 @@ export default function App() {
   const [reglas, setReglas] = useState<Regla[]>(() => leerLS<Regla[]>(CLAVE_REGLAS, []));
   const [libros, setLibros] = useState<LibroRemuneraciones[]>(() => leerLS<LibroRemuneraciones[]>(CLAVE_LIBROS, []));
   const [honorarios, setHonorarios] = useState<MesHonorarios[]>(() => leerLS<MesHonorarios[]>(CLAVE_HON, []));
-  const [conta, setConta] = useState<ConfigContable>(() => ({ ...configInicial(), ...leerLS<Partial<ConfigContable>>(CLAVE_CONTA, {}) }));
+  const [conta, setConta] = useState<ConfigContable>(() => completarPlan({ ...configInicial(), ...leerLS<Partial<ConfigContable>>(CLAVE_CONTA, {}) }));
   const [utm, setUtm] = useState<Record<string, number>>(() => leerLS<Record<string, number>>(CLAVE_UTM, {}));
   const [sinGuardar, setSinGuardar] = useState(false);
   const respaldoRef = useRef<HTMLInputElement>(null);
@@ -94,7 +94,7 @@ export default function App() {
 
   const controles = useMemo(() => (empresa ? controlesGenerales({ empresa: empresa.rut, docs, f29s, movs, libros, honorarios, utm }, conta) : []), [empresa, docs, f29s, movs, libros, honorarios, utm, conta]);
   const meses = useMemo(() => mesesConDatos(docs, f29s, movs, libros), [docs, f29s, movs, libros]);
-  const calcularMes = useCallback((p: string) => panelMes(p, docs, f29s, movs, libros), [docs, f29s, movs, libros]);
+  const calcularMes = useCallback((p: string) => panelMes(p, docs, f29s, movs, libros, { comisionLF: conta.ivaComisionLF }), [docs, f29s, movs, libros, conta.ivaComisionLF]);
   const pendientes = useMemo(() => (empresa ? contarPorClasificar(empresa, movs, docs, conta) : null), [empresa, movs, docs, conta]);
 
   async function leer(lista: FileList | File[]) {
@@ -116,8 +116,8 @@ export default function App() {
       const libro = r.libro, hon = r.honorarios;
       if (libro) setLibros(l => [...l.filter(x => x.periodo !== libro.periodo), libro].sort((a, b) => a.periodo.localeCompare(b.periodo)));   // el libro del mismo mes se reemplaza
       if (hon) setHonorarios(l => [...l.filter(x => !x.periodo.startsWith(hon.anio)), ...hon.meses]);
-      const f29 = r.f29;
-      if (f29) setF29s(l => [...l.filter(x => !(x.periodo === f29.periodo && x.folio === f29.folio)), f29]);   // el mismo folio no se duplica
+      const nuevos29 = r.f29s ?? (r.f29 ? [r.f29] : []);     // un F29 o todos los de una carpeta tributaria
+      if (nuevos29.length) setF29s(l => [...l.filter(x => !nuevos29.some(f => x.periodo === f.periodo && x.folio === f.folio)), ...nuevos29]);   // el mismo folio no se duplica
       setFichas(fs => fs.map(x => (x.id === nuevas[i].id ? { ...x, leyendo: false, resultado: r } : x)));
     }
   }
@@ -126,7 +126,7 @@ export default function App() {
     const m = new Map<string, { periodo: string; ventas: number; compras: number; nV: number; nC: number }>();
     for (const d of docs) {
       if (d.estado === 'ANULADA') continue;
-      const p = periodoDe(d), s = d.tipoDoc === 61 ? -1 : 1;
+      const p = periodoDe(d), s = signoDoc(d.tipoDoc);
       const r = m.get(p) ?? { periodo: p, ventas: 0, compras: 0, nV: 0, nC: 0 };
       if (d.libro === 'VENTA') { r.ventas += s * (d.neto + d.exento); r.nV++; } else { r.compras += s * (d.neto + d.exento); r.nC++; }
       m.set(p, r);
@@ -248,7 +248,13 @@ export default function App() {
           {fichas.length > 0 && (
             <section className="mesa" aria-live="polite">
               <div className="mesa-titulo"><h2>Lo que entendí</h2><button className="enlace" onClick={() => setFichas([])}>Limpiar la mesa</button></div>
-              <div className="fichas">{fichas.map(f => <FichaDoc key={f.id} f={f} lista={lista} onCargarEn={cargarEn} />)}</div>
+              <div className="fichas">{fichas.map(f => <FichaDoc key={f.id} f={f} lista={lista} onCargarEn={cargarEn} libroEnUso={conta.libro?.archivo === f.archivo}
+                onUsarLibro={() => {
+                  const l = f.resultado?.libroDiario; if (!l) return;
+                  const $ = (n: number) => '$' + Math.round(n).toLocaleString('de-DE');
+                  if (!confirm(`Usar este Libro Diario en la contabilidad de ${empresa.razonSocial}?\n\n${l.asientos.toLocaleString('de-DE')} asientos del ${l.desde.split('-').reverse().join('-')} al ${l.hasta.split('-').reverse().join('-')} (debe ${$(l.debe)}). Hasta esa fecha sus asientos reemplazan a los automáticos de compras, ventas, F29 y banco; después, la app sigue sola. Su plan de cuentas se agrega al tuyo. Puedes dejar de usarlo en Contabilidad.`)) return;
+                  setConta(c => usarLibro(c, f.archivo, l.plan, l.lineas)); ir('contabilidad');
+                }} />)}</div>
             </section>
           )}
         </>)}
@@ -272,7 +278,7 @@ export default function App() {
             </>)}
           </section>)}
 
-        {vista === 'iva' && (docs.length > 0 || f29s.length > 0 ? <PanelIVA docs={docs} f29s={f29s} libros={libros} honorarios={honorarios} utmUsuario={utm} onUtm={setUtm} />
+        {vista === 'iva' && (docs.length > 0 || f29s.length > 0 ? <PanelIVA docs={docs} f29s={f29s} libros={libros} honorarios={honorarios} utmUsuario={utm} onUtm={setUtm} cfg={conta} onCfg={setConta} />
           : sinDatos('Carga los RCV y los F29 (PDF) para cuadrar el IVA y armar el borrador del próximo F29.'))}
 
         {vista === 'personal' && (libros.length > 0 || honorarios.length > 0 ? <PanelPersonal libros={libros} honorarios={honorarios} movs={movs}
@@ -312,7 +318,7 @@ function SinDatos({ texto, onCargar }: { texto: string; onCargar: () => void }) 
   );
 }
 
-function FichaDoc({ f, lista, onCargarEn }: { f: Ficha; lista: Empresa[]; onCargarEn: (f: Ficha, e: Empresa) => void }) {
+function FichaDoc({ f, lista, onCargarEn, onUsarLibro, libroEnUso }: { f: Ficha; lista: Empresa[]; onCargarEn: (f: Ficha, e: Empresa) => void; onUsarLibro: () => void; libroEnUso: boolean }) {
   if (f.leyendo || !f.resultado) return (
     <article className="ficha leyendo"><p className="archivo">{f.archivo}</p><h3>Leyendo…</h3><p>Si es una foto o un PDF escaneado puede tardar un poco.</p></article>
   );
@@ -326,6 +332,7 @@ function FichaDoc({ f, lista, onCargarEn }: { f: Ficha; lista: Empresa[]; onCarg
         : otra ? <><p>Es de <b>{otra.razonSocial}</b>, otra empresa que tienes registrada.</p><button className="boton" onClick={() => onCargarEn(f, otra)}>Cargar en {otra.razonSocial}</button></>
         : r.estado === 'otra_empresa' ? <p>{r.mensaje} Si es tuya, agrégala con "Agregar empresa" y vuelve a cargar el archivo.</p>
         : <p>{r.mensaje}</p>}
+      {r.libroDiario && (libroEnUso ? <p><b>En uso en la contabilidad.</b></p> : <button className="boton" onClick={onUsarLibro}>Usar este libro</button>)}
       {r.avisos.slice(0, 3).map((a, i) => <p key={i} className="aviso">{a}</p>)}
       <p className="archivo" title={r.archivo}>{r.archivo}</p>
     </article>

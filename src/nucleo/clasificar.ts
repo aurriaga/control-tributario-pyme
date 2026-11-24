@@ -90,6 +90,11 @@ export function clasificar(nombre: string, c: Contenido): Clasificacion {
   // "PAGO SII F29 FORMULARIO 29" dentro de una cartola no la haga pasar por un F29
   const cabeza = normalizar(c.texto.slice(0, 1500));
   const enCabeza = (...k: string[]) => k.some(x => cabeza.includes(x));
+  // Un Libro Diario se reconoce antes que una cartola: su portada o sus notas pueden nombrar la cartola del banco
+  if (enCabeza('librodiario') || (cabTiene('asiento', 'comprobante') && cabTiene('cuenta', 'codigo') && cabTiene('debe', 'debito') && cabTiene('haber', 'credito') && !cabTiene('saldo')))
+    return r('LIBRO_DIARIO', enCabeza('librodiario') ? 'alta' : 'media', 'Tiene asientos con número, cuenta, debe y haber.');
+  if (!enCabeza('carpetatributaria') && enCabeza('estadodesituacionfinanciera', 'estadosfinancieros', 'balancegeneral', 'estadoderesultados'))
+    return r('DESCONOCIDO', 'media', 'Son estados financieros (balance y estado de resultados). La app no los carga como datos; sus saldos de cierre sirven para la apertura en Contabilidad.');
   const columnasBanco = cabTiene('saldo') && cabTiene('cargo', 'abono', 'debe', 'haber', 'monto', 'deposito', 'giro') && !enCabeza('librodiario');
   const movimientos = (c.texto.match(/^\s*\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b.*\d[\d.,]{2,}/gm) ?? []).length;
   if (columnasBanco || (enCabeza('cartola') && (movimientos >= 2 || c.formato === 'planilla'))) {

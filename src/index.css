@@ -175,6 +175,24 @@ tr.total td { font-weight: 700; background: var(--papel); }
 .ajustes { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 16px; }
 .ajustes label { display: grid; gap: 4px; font-size: 14px; color: var(--tenue); }
 .nota-borrador { color: var(--tenue); font-size: 14px; margin-top: 14px; max-width: 75ch; }
+/* Tasa del PPM e IVA de la comisión de liquidaciones-factura */
+.boton.chico { padding: 7px 14px; font-size: 14px; }
+.tasa-ppm { display: grid; grid-template-columns: auto auto; align-items: baseline; gap: 2px 10px; font-size: 14px; color: var(--tenue); }
+.tasa-ppm b { color: var(--grafito); font-size: 18px; }
+.tasa-ppm small { grid-column: 1 / -1; }
+.tasa-ppm .boton { grid-column: 1 / -1; justify-self: start; margin-top: 4px; }
+.elegir-ppm { margin-top: 16px; padding: 16px 18px; border: 2px solid var(--anil-suave); border-radius: 16px; background: var(--hoja); max-width: 78ch; }
+.elegir-ppm fieldset { border: 0; padding: 0; margin: 12px 0 0; }
+.elegir-ppm legend { font-weight: 700; color: var(--anil); margin-bottom: 4px; }
+.opcion-ppm { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; cursor: pointer; }
+.opcion-ppm input { margin-top: 4px; }
+.opcion-ppm small { color: var(--tenue); }
+.opcion-ppm .fuente { display: block; font-size: 12px; }
+.ajustes.en-linea { margin-top: 8px; align-items: end; }
+.acciones-ppm { display: flex; gap: 16px; align-items: center; margin-top: 14px; }
+.opcion-lf { margin: 0 0 18px; padding: 14px 16px; border-left: 4px solid var(--ambar); background: var(--hoja); border-radius: 0 12px 12px 0; max-width: 80ch; }
+.opcion-lf p { margin: 0 0 8px; }
+.opcion-lf label { display: flex; gap: 8px; align-items: center; padding: 3px 0; }
 
 /* Banco */
 .banco { margin-top: 28px; }

@@ -50,7 +50,7 @@ const movs: Movimiento[] = [
   mov('2026-08-12', 'PAGO PREVIRED', -200000, 1789000),
 ];
 const f29: F29 = { periodo: '2026-07', folio: '123', rut: EMP, fechaPresentacion: '12/08/2026', tipo: 'Primitiva', archivo: 'f29.pdf',
-  codigos: { '538': 190000 + 57000, '520': 95000 + 38000, '528': 19000, '537': 114000, '089': 133000, '062': 10000, '151': 15250, '048': 12000, '077': 0, '91': 170250 } };
+  codigos: { '538': 190000, '520': 95000 + 38000 + 57000, '528': 19000, '537': 171000, '089': 19000, '062': 10000, '151': 15250, '048': 12000, '077': 0, '91': 56250 } };
 const libro: LibroRemuneraciones = { periodo: '2026-07', rutEmpresa: EMP, archivo: 'libro', totalHaberes: 800000, totalLiquido: 0, cuadraTotales: true,
   trabajadores: [trabajador({ totalHaberes: 800000, afp: 80000, salud: 56000, cesantia: 4800, impuestoUnico: 12000 })] };
 const honorarios = [{ periodo: '2026-07', vigentes: 1, anuladas: 0, bruto: 100000, retencionTerceros: 15250, retencionEmisor: 0, liquido: 84750, control: 'OK' }];
@@ -91,8 +91,12 @@ describe('asientos automáticos', () => {
     expect(a.fecha).toBe('2026-07-01');
     expect(a.glosa).toMatch(/emitida el 28-06-2026/);
   });
-  it('liquidación-factura recibida: es una venta por mandatario', () => {
-    expect(r.asientos.find(x => x.clave === `C|${liquidacion.clave}`)!.lineas.map(l => l.codigo)).toEqual([C.CLIENTES, C.VENTAS, C.IVA_DF]);
+  it('liquidación-factura recibida: es la comisión del mandatario (gasto) y su IVA es crédito fiscal', () => {
+    expect(r.asientos.find(x => x.clave === `C|${liquidacion.clave}`)!.lineas).toEqual([{ codigo: C.COMISIONES, monto: 300000 }, { codigo: C.IVA_CF, monto: 57000 }, { codigo: C.PROVEEDORES, monto: -357000 }]);
+  });
+  it('si la empresa declara el IVA de la comisión como débito (propuesta del SII), ese IVA es costo y va al débito', () => {
+    const a = contabilidad(entradas, { ...config(), ivaComisionLF: 'debito' }).asientos.find(x => x.clave === `C|${liquidacion.clave}`)!;
+    expect(a.lineas).toEqual([{ codigo: C.COMISIONES, monto: 414000 }, { codigo: C.IVA_DF, monto: -57000 }, { codigo: C.PROVEEDORES, monto: -357000 }]);
   });
   it('remuneraciones: centralización del libro y aporte del empleador con el PREVIRED del mes siguiente', () => {
     expect(r.asientos.find(x => x.clave === 'R|2026-07')!.lineas).toEqual([{ codigo: C.GASTO_REMUN, monto: 800000 }, { codigo: C.REMUN, monto: -800000 }]);
@@ -101,8 +105,8 @@ describe('asientos automáticos', () => {
   it('honorarios y F29: gasto bruto; el F29 traspasa IVA, PPM y retenciones a impuestos por pagar', () => {
     expect(r.asientos.find(x => x.clave === 'H|2026-07')!.lineas[0]).toEqual({ codigo: C.GASTO_HONOR, monto: 100000 });
     const f = r.asientos.find(x => x.clave === 'F|2026-07')!;
-    expect(f.lineas.filter(l => l.codigo === C.IMPUESTOS).reduce((s, l) => s + l.monto, 0)).toBe(-(133000 + 10000 + 15250 + 12000));
-    expect(f.lineas.find(l => l.codigo === C.IVA_CF)!.monto).toBe(-(247000 - 133000));
+    expect(f.lineas.filter(l => l.codigo === C.IMPUESTOS).reduce((s, l) => s + l.monto, 0)).toBe(-(19000 + 10000 + 15250 + 12000));
+    expect(f.lineas.find(l => l.codigo === C.IVA_CF)!.monto).toBe(-(190000 - 19000));
   });
   it('banco: conciliado a clientes, cargo con RUT de proveedor a proveedores, clasificado a su cuenta y el resto a transitorias', () => {
     const contra = (desc: string) => r.asientos.find(a => a.origen === 'Banco' && a.glosa.includes(desc))!.lineas.find(l => l.codigo !== C.BANCO)!.codigo;
@@ -124,7 +128,7 @@ describe('asientos automáticos', () => {
   });
   it('el Estado de Resultados termina en el mismo resultado del balance', () => {
     expect(r.eerr[r.eerr.length - 1].monto).toBe(r.balance.resultado);
-    expect(r.eerr[0].monto).toBe(1300000);           // venta + liquidación
+    expect(r.eerr[0].monto).toBe(1000000);           // la comisión de la liquidación-factura no es venta
   });
   it('IVA del libro = F29: débito, crédito y remanente calzan', () => {
     expect(r.controles.find(c => c.nombre === 'IVA del libro = F29 declarados')?.estado).toBe('OK');

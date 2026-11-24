@@ -2,7 +2,8 @@
 import { extraer, type Servicios, type Formato } from './extraer';
 import { clasificar, NOMBRE_TIPO, type Clasificacion, type TipoDoc } from './clasificar';
 import { importarRCV, type Documento, type Empresa } from './rcv';
-import { leerF29, controlF29, type F29 } from './f29';
+import { leerF29, leerF29Carpeta, controlF29, type F29 } from './f29';
+import { leerLibroDiario, type LibroLeido } from './libroDiario';
 import { leerCartola, type Movimiento } from './cartola';
 import { leerLibroRemuneraciones, leerHonorarios, type LibroRemuneraciones, type InformeHonorarios } from './remuneraciones';
 
@@ -18,6 +19,8 @@ export interface ResultadoLectura {
   avisos: string[];
   documentos: Documento[];  // documentos del RCV leídos
   f29?: F29;                // formulario 29 leído
+  f29s?: F29[];             // los F29 de una carpeta tributaria
+  libroDiario?: LibroLeido; // Libro Diario de otro sistema (se usa en la contabilidad solo si el usuario lo pide)
   movimientos?: Movimiento[];   // movimientos de una cartola
   libro?: LibroRemuneraciones;  // libro de remuneraciones del mes
   honorarios?: InformeHonorarios;
@@ -25,9 +28,7 @@ export interface ResultadoLectura {
 
 // En qué etapa del plan se agrega la lectura completa de cada tipo (mientras tanto se reconoce y se informa)
 const ETAPA: Partial<Record<TipoDoc, string>> = {
-  F22: 'la etapa de contabilidad', CARPETA_TRIBUTARIA: 'la etapa de contabilidad',
-  LIBRO_DIARIO: 'la etapa de contabilidad',
-  FACTURA: 'una próxima etapa', BOLETA: 'una próxima etapa',
+  F22: 'una próxima versión', FACTURA: 'una próxima versión', BOLETA: 'una próxima versión',
 };
 
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
@@ -106,6 +107,25 @@ export async function leerArchivo(nombre: string, bytes: Uint8Array, ctx: Contex
     res.movimientos = c.movimientos;
     res.titulo = `Cartola${cl.banco ? ' ' + cl.banco : ''}${c.cuenta ? ', cuenta ' + c.cuenta : ''}${cl.periodo ? ', ' + periodoLegible(cl.periodo) : ''}`;
     res.mensaje = c.mensaje + (c.cuadra === false ? ' Los saldos no cuadran: revisa los avisos.' : '');
+    return res;
+  }
+  if (cl.tipo === 'CARPETA_TRIBUTARIA') {
+    const fs = leerF29Carpeta(contenido.texto, nombre);
+    if (!fs.length) { res.mensaje = 'Es una carpeta tributaria, pero no trae formularios 29 legibles (¿es un PDF escaneado?).'; return res; }
+    const per = fs.map(f => f.periodo).sort();
+    res.estado = 'leido'; res.f29s = fs;
+    res.titulo = `Carpeta tributaria: ${fs.length} F29`;
+    res.mensaje = `Trae ${fs.length} formularios 29, de ${periodoLegible(per[0])} a ${periodoLegible(per[per.length - 1])}. Se cargaron para cuadrar el IVA y armar el borrador; la contabilidad usa solo los de sus meses.`;
+    for (const f of fs) for (const o of controlF29(f)) res.avisos.push(`${periodoLegible(f.periodo)}: ${o}`);
+    return res;
+  }
+  if (cl.tipo === 'LIBRO_DIARIO') {
+    const l = leerLibroDiario(contenido);
+    if (!l.dato) { res.estado = 'error'; res.mensaje = l.mensaje; return res; }
+    res.estado = 'leido'; res.libroDiario = l.dato;
+    res.titulo = `Libro Diario, ${periodoLegible(l.dato.desde.slice(0, 7))} a ${periodoLegible(l.dato.hasta.slice(0, 7))}`;
+    res.mensaje = `${l.mensaje} No se cargó nada todavía: con "Usar este libro" sus asientos reemplazan a los automáticos hasta su última fecha.`;
+    res.avisos.push(...l.dato.avisos);
     return res;
   }
   if (cl.tipo === 'F29') {

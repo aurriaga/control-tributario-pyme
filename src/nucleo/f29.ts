@@ -1,6 +1,6 @@
 // Formulario 29: lectura del PDF del SII, cuadratura del IVA contra el RCV y borrador del mes.
 // Equivale a leer_f29/cuadratura (sii.py) y a la hoja "Borrador F29" (modContabilidad.bas).
-import type { Documento } from './rcv';
+import { signoDoc, esComisionLF, type Documento, type OpcionesIVA } from './rcv';
 import { parseMonto } from './texto';
 import { formatearRUT } from './rut';
 import { periodoDe } from './resumen';
@@ -59,20 +59,24 @@ export function f29PorPeriodo(f29s: F29[]): Map<string, F29> {
   return m;
 }
 
-const signo = (d: Documento) => (d.tipoDoc === 61 || d.tipoDoc === 60 ? -1 : 1);
-const esLiquidacion = (d: Documento) => d.libro === 'COMPRA' && (d.tipoDoc === 40 || d.tipoDoc === 43);
+/** Separa la Carpeta Tributaria del SII en sus F29: cada declaración viene completa, en el mismo formato del F29 compacto. */
+export function leerF29Carpeta(texto: string, archivo: string): F29[] {
+  return texto.split(/(?=DECLARACI[ÓO]N MENSUAL Y PAGO\s*\n?\s*SIMULT[ÁA]NEO)/i).slice(1)
+    .map(t => leerF29(t, archivo)).filter((f): f is F29 => !!f && Object.keys(f.codigos).length > 3);
+}
 
 export interface TotalesRCV { debito: number; credito: number; base: number; docsVenta: number; docsCompra: number }
 
-/** Débito, crédito y base del PPM del RCV de un período. Las liquidaciones-factura recibidas (40 y 43) son ventas
- *  hechas por un mandatario: su IVA va al débito y su neto a la base del PPM, no al crédito. */
-export function totalesRCV(docs: Documento[], periodo: string): TotalesRCV {
+/** Débito, crédito y base del PPM del RCV de un período. Las notas de crédito (61, 60 y 112 de exportación) restan.
+ *  La comisión de las liquidaciones-factura (compras 40 y 43) va a crédito, o a débito y a la base del PPM si la empresa
+ *  sigue la propuesta del SII (opción comisionLF: 'debito'). */
+export function totalesRCV(docs: Documento[], periodo: string, op: OpcionesIVA = {}): TotalesRCV {
   const t: TotalesRCV = { debito: 0, credito: 0, base: 0, docsVenta: 0, docsCompra: 0 };
   for (const d of docs) {
     if (periodoDe(d) !== periodo || d.estado === 'ANULADA') continue;
-    const s = signo(d);
+    const s = signoDoc(d.tipoDoc);
     if (d.libro === 'VENTA') { t.debito += s * d.iva; t.base += s * (d.neto + d.exento); t.docsVenta++; }
-    else if (esLiquidacion(d)) { t.debito += d.iva; t.base += d.neto + d.exento; t.docsCompra++; }
+    else if (esComisionLF(d) && op.comisionLF === 'debito') { t.debito += d.iva; t.base += d.neto + d.exento; t.docsCompra++; }
     else { t.credito += s * d.iva; t.docsCompra++; }
   }
   return t;
@@ -86,12 +90,12 @@ export interface FilaCuadratura {
 
 /** Compara mes a mes lo declarado en el F29 con el detalle del RCV: IVA al peso (tolerancia $1) y la base del PPM con
  *  hasta $10 por redondeo (el SII la calcula desde el débito; el RCV suma documento por documento). */
-export function cuadratura(docs: Documento[], f29s: F29[]): FilaCuadratura[] {
+export function cuadratura(docs: Documento[], f29s: F29[], op: OpcionesIVA = {}): FilaCuadratura[] {
   const porPer = f29PorPeriodo(f29s);
   const periodos = [...new Set([...docs.map(periodoDe), ...porPer.keys()])].sort();
   const $ = (n: number) => (n < 0 ? '−$' : '$') + Math.abs(Math.round(n)).toLocaleString('de-DE');
   return periodos.map(p => {
-    const t = totalesRCV(docs, p), f = porPer.get(p);
+    const t = totalesRCV(docs, p, op), f = porPer.get(p);
     const c = (k: string) => f?.codigos[k] ?? 0;
     const fila: FilaCuadratura = { periodo: p, estado: 'Cuadra', detalle: '', debitoRCV: t.debito, creditoRCV: t.credito, baseRCV: t.base,
       debitoF29: f ? c('538') : null, creditoF29: f ? c('520') - c('528') : null, baseF29: f ? c('563') : null };
@@ -122,10 +126,10 @@ export interface Borrador { periodo: string; lineas: LineaBorrador[]; vence: str
 /** Borrador del F29 de un período con lo cargado: IVA del RCV, remanente del mes anterior reajustado por UTM y PPM. */
 /** personal: impuesto único del libro de remuneraciones (048) y retención de las boletas de honorarios (151) del mes. */
 export function borradorF29(docs: Documento[], f29s: F29[], periodo: string, utm: Record<string, number>, tasaManual?: number,
-  personal?: { impuestoUnico: number | null; retencionHonorarios: number | null }): Borrador {
+  personal?: { impuestoUnico: number | null; retencionHonorarios: number | null }, op: OpcionesIVA = {}): Borrador {
   const porPer = f29PorPeriodo(f29s);
   const decl = porPer.get(periodo), ant = porPer.get(mesVecino(periodo, -1));
-  const t = totalesRCV(docs, periodo);
+  const t = totalesRCV(docs, periodo, op);
   const avisos: string[] = [];
   const remAnt = ant?.codigos['077'] ?? null;
   if (remAnt === null) avisos.push(`Falta el F29 de ${mesVecino(periodo, -1)}: sin él no se conoce el remanente del mes anterior y se usa cero.`);
@@ -159,10 +163,10 @@ export function borradorF29(docs: Documento[], f29s: F29[], periodo: string, utm
 export interface ResumenF29 { cargados: number; ivaPagado: number; ppm: number; totalPagado: number; cuadran: number; conDiferencias: string[]; sinF29: string[] }
 
 /** Lo declarado en el año según los F29 cargados y cómo cuadran con el RCV. */
-export function resumenF29(docs: Documento[], f29s: F29[], anio: number): ResumenF29 {
+export function resumenF29(docs: Documento[], f29s: F29[], anio: number, op: OpcionesIVA = {}): ResumenF29 {
   const delAnio = [...f29PorPeriodo(f29s).values()].filter(f => f.periodo.startsWith(String(anio)));
   const suma = (k: string) => delAnio.reduce((a, f) => a + (f.codigos[k] ?? 0), 0);
-  const filas = cuadratura(docs, f29s).filter(f => f.periodo.startsWith(String(anio)));
+  const filas = cuadratura(docs, f29s, op).filter(f => f.periodo.startsWith(String(anio)));
   return { cargados: delAnio.length, ivaPagado: suma('089'), ppm: suma('062'), totalPagado: suma('91'),
     cuadran: filas.filter(f => f.estado === 'Cuadra').length,
     conDiferencias: filas.filter(f => f.estado === 'Diferencias').map(f => f.periodo),

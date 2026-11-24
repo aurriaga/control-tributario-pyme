@@ -6,7 +6,7 @@ import type { F29 } from './nucleo/f29';
 import type { LibroRemuneraciones, MesHonorarios } from './nucleo/remuneraciones';
 import { periodoLegible } from './nucleo/lector';
 import {
-  contabilidad, balance8, estadoResultados, mayor, aperturaSugerida, proveedoresSinCategoria, asignarCategoria, ordenarPlan, PLAN_BASE,
+  contabilidad, balance8, estadoResultados, mayor, aperturaSugerida, dejarLibro, proveedoresSinCategoria, asignarCategoria, ordenarPlan, PLAN_BASE,
   CATEGORIAS_GASTO, type ConfigContable, type Cuenta, type TipoCuenta, type LineaApertura, type LineaManual, type Origen, type EstadoControl, type Control,
 } from './nucleo/contabilidad';
 import { pesos } from './formato';
@@ -20,7 +20,7 @@ type Pestana = 'revision' | 'resultados' | 'balance' | 'diario' | 'mayor' | 'cat
 const PESTANAS: [Pestana, string][] = [['revision', 'Revisión'], ['resultados', 'Estado de resultados'], ['balance', 'Balance'], ['diario', 'Libro Diario'],
   ['mayor', 'Mayor'], ['categorias', 'Categorías de compras'], ['ajustes', 'Apertura y ajustes'], ['plan', 'Plan de cuentas']];
 const CHIP: Record<EstadoControl, string> = { OK: 'verde', Revisar: 'rojo', Pendiente: 'ambar' };
-const ORIGENES: Origen[] = ['Apertura', 'Manual', 'Ventas', 'Compras', 'Remuneraciones', 'Honorarios', 'F29', 'Banco'];
+const ORIGENES: Origen[] = ['Apertura', 'Libro', 'Manual', 'Ventas', 'Compras', 'Remuneraciones', 'Honorarios', 'F29', 'Banco'];
 const fechaCorta = (iso: string) => `${iso.slice(8, 10)}-${iso.slice(5, 7)}-${iso.slice(0, 4)}`;
 const num = (s: string) => Math.round(Number(s.replace(/\./g, '').replace(',', '.')) || 0);
 const vacio = (n: number) => (n ? pesos(n) : '');
@@ -63,6 +63,9 @@ export default function PanelContabilidad({ empresa, docs, f29s, movs, libros, h
         <button className="boton secundario" onClick={descargar} disabled={!r.diario.length}>Descargar en Excel</button></div>
       <p className="bajada chica">El Libro Diario se arma solo con lo que cargaste: {r.asientos.length.toLocaleString('de-DE')} asientos y {r.diario.length.toLocaleString('de-DE')} líneas.
         {' '}Tú decides las categorías de las compras, la apertura y los ajustes. {pendientes ? `${pendientes} controles piden atención.` : 'Todos los controles están en orden.'}</p>
+      {cfg.libro && cfg.libro.lineas.length > 0 && (
+        <p className="opcion-lf">Usa el Libro Diario importado <b>{cfg.libro.archivo}</b> ({cfg.libro.asientos.toLocaleString('de-DE')} asientos): hasta el {fechaCorta(cfg.libro.hasta)} mandan sus asientos; después, la app contabiliza sola.
+          {' '}<button className="enlace" onClick={() => { if (confirm('¿Dejar de usar el Libro Diario importado? Vuelven los asientos automáticos para esas fechas; sus cuentas quedan en el plan.')) onCfg(dejarLibro(cfg)); }}>Dejar de usarlo</button></p>)}
 
       <div className="pestanas" role="tablist" aria-label="Partes de la contabilidad">
         {PESTANAS.map(([k, t]) => <button key={k} role="tab" aria-selected={pestana === k} className={pestana === k ? 'activa' : ''} onClick={() => setPestana(k)}>{t}</button>)}

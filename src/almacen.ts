@@ -93,9 +93,11 @@ export function agregarLectura(ls: Almacen, rut: string, r: ResultadoLectura): n
     const nuevos = r.movimientos.filter(m => !ya.has(m.clave)); n += nuevos.length;
     ls.setItem(k('movimientos'), JSON.stringify([...movs, ...nuevos]));
   }
-  if (r.f29) {
-    const f = r.f29, l = leer<F29[]>(ls, k('f29'), []);
-    ls.setItem(k('f29'), JSON.stringify([...l.filter(x => !(x.periodo === f.periodo && x.folio === f.folio)), f])); n++;
+  const nuevos29 = r.f29s ?? (r.f29 ? [r.f29] : []);
+  if (nuevos29.length) {
+    const l = leer<F29[]>(ls, k('f29'), []);
+    const quedan = l.filter(x => !nuevos29.some(f => x.periodo === f.periodo && x.folio === f.folio));
+    ls.setItem(k('f29'), JSON.stringify([...quedan, ...nuevos29])); n += nuevos29.length;
   }
   if (r.libro) {
     const lb = r.libro, l = leer<LibroRemuneraciones[]>(ls, k('libros'), []);

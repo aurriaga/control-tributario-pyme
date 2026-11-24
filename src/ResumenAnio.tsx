@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import * as XLSX from 'xlsx';
-import type { Documento, Empresa } from './nucleo/rcv';
+import { signoDoc, esComisionLF, type Documento, type Empresa } from './nucleo/rcv';
 import { aniosDisponibles, resumenAnual } from './nucleo/resumen';
 import { resumenF29, type F29 } from './nucleo/f29';
 import type { Movimiento } from './nucleo/cartola';
@@ -16,12 +16,12 @@ const millones = (n: number) => (n < 0 ? '−' : '') + '$' + (Math.abs(n) / 1e6)
 export default function ResumenAnio({ docs, f29s, movs, libros, honorarios, empresa, cfg, controles, onCerrar }: { docs: Documento[]; f29s: F29[]; movs: Movimiento[]; libros: LibroRemuneraciones[]; honorarios: MesHonorarios[]; empresa: Empresa; cfg: ConfigContable; controles: Control[]; onCerrar: () => void }) {
   const anios = useMemo(() => [...new Set([...aniosDisponibles(docs), ...f29s.map(f => Number(f.periodo.slice(0, 4)))])].sort((a, b) => b - a), [docs, f29s]);
   const [anio, setAnio] = useState(anios[0] ?? new Date().getFullYear());
-  const r = useMemo(() => resumenAnual(docs, anio), [docs, anio]);
-  const rf = useMemo(() => resumenF29(docs, f29s, anio), [docs, f29s, anio]);
+  const r = useMemo(() => resumenAnual(docs, anio, { comisionLF: cfg.ivaComisionLF }), [docs, anio, cfg.ivaComisionLF]);
+  const rf = useMemo(() => resumenF29(docs, f29s, anio, { comisionLF: cfg.ivaComisionLF }), [docs, f29s, anio, cfg.ivaComisionLF]);
   const banco = useMemo(() => {
     const delAnio = movs.filter(m => m.fecha.startsWith(String(anio))).sort((a, b) => a.fecha.localeCompare(b.fecha));
-    const porCobrar = docs.filter(d => d.libro === 'VENTA' && d.estado === 'POR COBRAR' && d.tipoDoc !== 61).reduce((a, d) => a + d.total, 0);
-    const porPagar = docs.filter(d => d.libro === 'COMPRA' && d.estado === 'POR PAGAR' && d.tipoDoc !== 61 && d.tipoDoc !== 40 && d.tipoDoc !== 43).reduce((a, d) => a + d.total, 0);
+    const porCobrar = docs.filter(d => d.libro === 'VENTA' && d.estado === 'POR COBRAR' && signoDoc(d.tipoDoc) > 0).reduce((a, d) => a + d.total, 0);
+    const porPagar = docs.filter(d => d.libro === 'COMPRA' && d.estado === 'POR PAGAR' && signoDoc(d.tipoDoc) > 0 && !esComisionLF(d)).reduce((a, d) => a + d.total, 0);
     const sinIdentificar = delAnio.filter(m => m.estado === 'pendiente');
     return { n: delAnio.length, saldo: delAnio.length ? delAnio[delAnio.length - 1].saldo : null, porCobrar, porPagar,
       sinIdentificar: sinIdentificar.length, montoSinIdentificar: sinIdentificar.reduce((a, m) => a + m.abono + m.cargo, 0), conBanco: movs.length > 0 };
