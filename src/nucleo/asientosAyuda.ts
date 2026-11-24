@@ -92,6 +92,27 @@ export function proponerAsiento(frase: string, plan: Cuenta[], hoy = new Date().
       porque: `El gasto es el bruto; la empresa retiene el ${(tasa * 100).toLocaleString('es-CL')}% y lo paga en el F29 (código 151), y al prestador le paga el líquido. Las boletas de honorarios no llevan IVA.`,
       aviso: 'Si cargaste el informe de honorarios del SII, la app ya registra los honorarios del mes: no lo agregues otra vez.' });
   }
+  // Traspaso entre cuentas propias: sale de un banco y entra al otro; no es ingreso ni gasto
+  if (/\btraspas\w*|\bentre (mis|nuestras|las) cuentas\b|\bde una cuenta a otra\b/.test(t)) {
+    const bancos = plan.filter(c => c.tipo === 'Activo' && (c.rol === 'banco' || (c.cuentaBancaria ?? '').replace(/\D/g, '').length >= 6));
+    if (bancos.length >= 2) return listo({ titulo: 'Traspaso entre cuentas propias', glosa: `Traspaso de ${bancos[0].nombre} a ${bancos[1].nombre}`,
+      lineas: [L(bancos[1].codigo, monto, 0), L(bancos[0].codigo, 0, monto)], porque: 'La plata cambia de cuenta: entra a una y sale de la otra por el mismo monto. No es ingreso ni gasto. Revisa que el origen y el destino sean los correctos.',
+      aviso: 'Si las dos cartolas están cargadas, basta con clasificar ambos movimientos como "Traspaso entre cuentas propias": no lo agregues otra vez.' });
+    return listo({ titulo: 'Traspaso entre cuentas propias', glosa: 'Traspaso entre cuentas propias (sale)', lineas: [L(1198, monto, 0), L(1102, 0, monto)],
+      porque: 'Mientras la plata va de una cuenta a otra queda en 1198 Traspasos entre cuentas propias; cuando entra al otro banco se hace el asiento inverso (1102 al debe, 1198 al haber) y la transitoria queda en cero.',
+      aviso: 'Si cada banco tiene su propia cuenta en el plan (con su número en "Cuenta bancaria"), el traspaso va directo de una a otra. Si las dos cartolas están cargadas, clasifica ambos movimientos como "Traspaso entre cuentas propias".' });
+  }
+  // Exportaciones (exentas de IVA) y su nota de crédito
+  if (/\bexport\w*/.test(t)) {
+    const deb = /\b(cobr\w*|transferencia|banco|deposit\w*|me pagaron)\b/.test(t) ? 1102 : 1103;    // por omisión, queda por cobrar al cliente del exterior
+    if (deb === 1103) supuestos.push('No dijiste si ya te pagaron: lo dejé por cobrar al cliente del exterior.');
+    if (/\bnota de credito\b|\bnc\b/.test(t)) return listo({ titulo: 'Nota de crédito de exportación', glosa: 'Nota de crédito de exportación (documento 112)', lineas: [L(4101, monto, 0), L(1103, 0, monto)],
+      porque: 'La nota de crédito rebaja la venta de exportación y lo que te debe el cliente del exterior. No lleva IVA, y en el F29 rebaja las exportaciones del mes (código 20), que también son base del PPM.',
+      aviso: 'Si la nota de crédito ya está en el RCV que cargaste, la app la contabiliza sola.' });
+    return listo({ titulo: 'Venta de exportación', glosa: 'Venta de exportación (factura de exportación, documento 110)', lineas: [L(deb, monto, 0), L(4101, 0, monto)],
+      porque: 'La exportación es una venta exenta de IVA (DL 825, art. 12 letra D): no hay débito fiscal. El IVA de las compras para exportar se puede recuperar (art. 36). Se registra por el valor en pesos del documento; las diferencias de cambio al cobrar van a resultado.',
+      aviso: 'Si la factura de exportación ya está en el RCV que cargaste, la app la contabiliza sola.' });
+  }
   // Ventas
   const boleta = /\bboleta\b/.test(t);
   if (/\b(vend\w*|venta|factur\w* a)\b/.test(t)) {
@@ -100,13 +121,16 @@ export function proponerAsiento(frase: string, plan: Cuenta[], hoy = new Date().
     return listo({ titulo: `Venta ${m.codigo ? m.texto : 'a crédito'}`, glosa: `Venta ${boleta ? 'con boleta' : 'con factura'} ${m.texto}`, calculo: v.calculo,
       lineas: [L(deb, v.total, 0), L(4101, 0, v.neto), L(2103, 0, v.iva)],
       porque: `Aumenta ${deb === 1103 ? 'lo que te deben los clientes' : 'la plata'} por el total; la venta se reconoce por el neto (NIIF para PYMES, Sección 23) y el IVA cobrado es deuda con el Fisco (IVA Débito Fiscal).`,
-      aviso: 'Si la factura o boleta ya está en el RCV que cargaste, la app la contabiliza sola: agrégalo solo si no está.' });
+      aviso: /\b(feria|consignat\w*|remate\w*|liquidacion)\b/.test(t)
+        ? 'Si vendiste por una feria o un consignatario, el documento es una liquidación-factura: además de la venta, la feria descuenta su comisión, que es un gasto (5105 Comisiones de ventas). Si ya está en el RCV, la app registra las dos partes sola.'
+        : 'Si la factura o boleta ya está en el RCV que cargaste, la app la contabiliza sola: agrégalo solo si no está.' });
   }
   // Compras y gastos
-  if (/\b(compr\w*|pague|pago|gasto|factura|arriendo|luz|agua|internet|combustible|bencina|flete)\b/.test(t)) {
+  if (/\b(compr\w*|pague|pago|gasto|factura|arriendo|luz|agua|internet|combustible|bencina|flete|comision\w*)\b/.test(t)) {
     const af = ACTIVO_FIJO.test(t) && plan.some(c => c.codigo === 1201);
     const cats = [...new Set(plan.map(c => c.categoria).filter((c): c is string => !!c))];
-    const extra: [RegExp, string][] = [[/\b(luz|agua|internet|telefono|celular|gas)\b/, 'Servicios básicos'], [/\b(bencina|combustible|petroleo|diesel)\b/, 'Combustibles y lubricantes'], [/\barriendo\b/, 'Arriendos'], [/\bflete\b/, 'Fletes y despacho']];
+    const extra: [RegExp, string][] = [[/\b(luz|agua|internet|telefono|celular|gas)\b/, 'Servicios básicos'], [/\b(bencina|combustible|petroleo|diesel)\b/, 'Combustibles y lubricantes'], [/\barriendo\b/, 'Arriendos'], [/\bflete\b/, 'Fletes y despacho'],
+      [/\bcomision\w*/, 'Comisiones de ventas'], [/\b(fertilizante\w*|semillas?|forraje|alimento para|insumos? agricola\w*|abono\w*|ganado|vaquillas?|novillos?|terneros?)\b/, 'Materiales e insumos del giro']];
     const cat = af ? 'Activo fijo' : (extra.find(([re]) => re.test(t))?.[1] ?? sugerirCategoria(frase, cats)?.categoria ?? '');
     const cGasto = plan.find(c => c.categoria === cat)?.codigo ?? (af ? 1201 : 5211);
     if (!cat) supuestos.push('No supe el tipo de gasto: lo dejé en 5211 Gastos generales; cámbialo si corresponde.');

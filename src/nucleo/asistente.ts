@@ -11,6 +11,7 @@ import { esTributaria } from './tributario';
 import { normativa, retencionHonorarios, ppmMinimo } from './normativa';
 import { jerga, pideDefinicion, esTerminoSuelto } from './vocabulario';
 import { pideBusqueda, type Doc } from './buscador';
+import { pideDatos } from './consultas';
 
 export type Vista = 'inicio' | 'cargar' | 'clasificar' | 'documentos' | 'iva' | 'personal' | 'banco' | 'contabilidad' | 'noticias';
 export type Accion =
@@ -26,6 +27,9 @@ const ir = (etiqueta: string, vista: Vista, pestana?: string): Accion => ({ tipo
 
 const TEMAS: Tema[] = [
   { claves: 'cargar subir archivo documento rcv registro compras ventas sii csv excel', texto: 'Para cargar el RCV: en el SII entra a Registro de Compras y Ventas, descarga el detalle de compras y de ventas del mes (CSV o Excel) y arrástralo al buzón de "Cargar documentos". La app reconoce el archivo por su contenido y te muestra un timbre verde si lo cargó.', acciones: [ir('Ir a Cargar documentos', 'cargar')] },
+  { claves: 'carpeta tributaria libro diario importar importo traer otro sistema contador anterior', texto: 'La carpeta tributaria del SII (PDF) se carga en "Cargar documentos": la app saca todos sus F29 de una vez. Un Libro Diario de otro sistema o de Excel también se arrastra ahí; en su ficha aprieta "Usar este libro": hasta su última fecha sus asientos reemplazan a los automáticos y su plan de cuentas se suma al tuyo. Se deja de usar en Contabilidad.', acciones: [ir('Ir a Cargar documentos', 'cargar')] },
+  { claves: 'dos cuentas bancarias bancos varias corrientes conciliar concilio traspaso traspasos', texto: 'Con varios bancos: carga la cartola de cada cuenta; la app las separa por su número. Para que cada una tenga su cuenta contable, en "Contabilidad" > "Plan de cuentas" crea una cuenta de activo por banco y escribe su número en "Cuenta bancaria". Los traspasos entre tus cuentas clasifícalos como "Traspaso entre cuentas propias" en las dos cartolas.', acciones: [ir('Ir al plan de cuentas', 'contabilidad', 'Plan de cuentas')] },
+  { claves: 'tasa ppm cambiar elegir voluntaria regimen propyme transparente', texto: 'La tasa del PPM se elige en "IVA y F29", bajo el borrador, con "Cambiar tasa del PPM": están las del SII para cada régimen (Pro Pyme, Transparente, régimen general con el cálculo del art. 84 a), la del último F29 y una voluntaria.', acciones: [ir('Ir a IVA y F29', 'iva')] },
   { claves: 'cartola banco movimientos cargar extracto santander bancoestado chile bci', texto: 'Para cargar el banco: descarga la cartola de cada mes desde tu banco (Excel, CSV o PDF) y arrástrala a "Cargar documentos". La app revisa que los saldos cuadren y no repite movimientos si cargas la misma cartola dos veces.', acciones: [ir('Ir a Cargar documentos', 'cargar')] },
   { claves: 'f29 formulario 29 declarar pdf iva mensual cuadra cuadratura', texto: 'El F29 se carga como PDF (formulario compacto descargado del SII) en "Cargar documentos". En "IVA y F29" la app lo compara mes a mes con tu RCV: "Cuadra" significa que coinciden al peso. Más abajo hay un borrador del próximo F29.', acciones: [ir('Ir a IVA y F29', 'iva')] },
   { claves: 'borrador proximo f29 calcular ppm tasa remanente utm', texto: 'El borrador del F29 está en "IVA y F29": elige el mes, revisa la tasa del PPM y la UTM. El remanente del mes anterior se reajusta con la UTM; si falta la UTM de un mes, ingrésala ahí (sii.cl > Valores y fechas > UTM).', acciones: [ir('Ir a IVA y F29', 'iva')] },
@@ -52,6 +56,9 @@ const TEMAS: Tema[] = [
 export const temasAyuda = (): Doc[] => TEMAS.map(t => ({ tipo: 'ayuda', titulo: 'Ayuda de la app', texto: t.texto, claves: t.claves }));
 
 const STOP = new Set('como hago puedo para que donde esta los las el la un una de del en y o a se me mi mis por con hay es son lo al cuando quiero necesito ver'.split(' '));
+// Palabras que aparecen en casi todo: solas no bastan para elegir un tema (si no, "¿qué es una liquidación factura?"
+// terminaba en "cómo anular una factura")
+const DEBILES = new Set('factura facturas cuenta cuentas documento documentos banco iva sii mes empresa pago pagos activo activos impuesto impuestos libro cargo'.split(' '));
 const tokens = (s: string) => jerga(s).trim().split(' ').filter(w => w.length > 2 && !STOP.has(w));
 
 /** Busca el tema de ayuda que mejor calza con la pregunta (palabras en común, con prefijos para plurales). */
@@ -61,7 +68,7 @@ export function buscarAyuda(pregunta: string): Respuesta | null {
   let mejor: Tema | null = null, puntos = 0;
   for (const t of TEMAS) {
     const ks = t.claves.split(' ');
-    const p = q.reduce((s, w) => s + (ks.some(k => k === w) ? 2 : ks.some(k => k.length >= 4 && w.length >= 4 && (k.startsWith(w.slice(0, 5)) || w.startsWith(k.slice(0, 5)))) ? 1 : 0), 0);
+    const p = q.reduce((s, w) => s + (ks.some(k => k === w) ? (DEBILES.has(w) ? 1 : 2) : !DEBILES.has(w) && ks.some(k => k.length >= 4 && w.length >= 4 && (k.startsWith(w.slice(0, 5)) || w.startsWith(k.slice(0, 5)))) ? 1 : 0), 0);
     if (p > puntos) { puntos = p; mejor = t; }
   }
   return mejor && puntos >= 2 ? { texto: mejor.texto, acciones: mejor.acciones ?? [] } : null;
@@ -134,24 +141,35 @@ export const SALUDO: Respuesta = {
 };
 
 /** Responde una pregunta. Las órdenes "revisar" y "qué falta" se resuelven en la pantalla (necesitan los datos). */
-export function intencion(pregunta: string): 'tributaria' | 'glosario' | 'noticias' | 'buscar' | 'asiento' | 'normativa' | 'revisar' | 'falta' | 'ayuda' {
+export type Intencion = 'charla' | 'datos' | 'tributaria' | 'glosario' | 'noticias' | 'buscar' | 'asiento' | 'normativa' | 'revisar' | 'falta' | 'ayuda';
+export function intencion(pregunta: string): Intencion {
   const t = jerga(pregunta);
   const monto = montoDe(pregunta);
+  if (/^ *(?:hola|holi|buenas|buenos dias|buenas tardes|buenas noches|gracias|muchas gracias|ok|vale|chao|adios|hasta luego)(?: \w+){0,2} *$/.test(t)) return 'charla';
+  if (pideDatos(pregunta)) return 'datos';                 // "¿cuánto IVA pagué en junio?": los números de la empresa
   // "¿qué es el CF?", "¿cuándo vence la 29?", "las DJ": definición antes que cálculo (salvo que traiga un monto para calcular)
   if ((pideDefinicion(pregunta) || esTerminoSuelto(pregunta)) && !(monto !== null && esTributaria(pregunta))) return 'glosario';
   if (esTributaria(pregunta)) return 'tributaria';
   if (/\b(noticias?|circular(es)?|resolucion(es)?|que (publico|publicó|saco) el sii|novedades del sii)\b/.test(t)) return 'noticias';
   if (pideBusqueda(pregunta)) return 'buscar';             // "¿qué cambia la reforma para las 14 A?"
-  if (/\b(asiento|contabiliz\w*|registr\w*|deprecia\w*|vend\w*|venta|compr\w*|pague|gaste|aporte|retir\w*|prestamo|honorarios?|arriendo)\b/.test(t) && (montoDe(pregunta) !== null || /\bdeprecia/.test(t)) && !/\bcomo (cargo|hago|se)\b/.test(t)) return 'asiento';
-  if (/\b(normativa|ley(es)?|tasa|tasas|utm|novedad\w*|cambio\w* tributari\w*|sii)\b/.test(t) && !/\bcomo (cargo|hago)\b/.test(t)) return 'normativa';
+  if (/\b(asiento|contabiliz\w*|registr\w*|deprecia\w*|vend\w*|venta|compr\w*|pague|gaste|aporte|retir\w*|prestamo|honorarios?|arriendo|export\w*|traspas\w*|nota de credito|comision\w*)\b/.test(t) && (montoDe(pregunta) !== null || /\bdeprecia/.test(t)) && !/\bcomo (cargo|hago|se)\b/.test(t)) return 'asiento';
+  if (/\b(normativa|ley(es)?|tasa|tasas|utm|novedad\w*|cambio\w* tributari\w*|sii)\b/.test(t) && !/\bcomo (cargo|hago)\b/.test(t) && !/\b(multas?|giros?|notificaci\w*|citaci\w*|devolucion\w*|ppm)\b/.test(t)) return 'normativa';
   if (/\b(revis\w*|error(es)?|problema\w*|mal|arregl\w*|corregi\w*|falla\w*|diagnost\w*)\b/.test(t)) return 'revisar';
   if (/\b(falta\w*|pendiente\w*|mes)\b/.test(t) && !/\bcomo\b/.test(t)) return 'falta';
   return 'ayuda';
 }
 /** Lo que dice la normativa vigente que usa la app (y de cuándo es). */
-export function respuestaNormativa(hoy = new Date()): Respuesta {
+export function respuestaNormativa(hoy = new Date(), pregunta = ''): Respuesta {
   const n = normativa(), anio = hoy.getFullYear();
   const utms = Object.entries(n.utm).sort(), [mesU, valU] = utms[utms.length - 1] ?? ['', 0];
+  // "¿Cuánto es la UTM de noviembre?": el valor de ese mes, si está
+  const t = jerga(pregunta), MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  const im = MESES.findIndex(m => t.includes(` ${m} `));
+  if (/ utm /.test(t) && im >= 0) {
+    const a = t.match(/ (20\d\d) /)?.[1] ?? String(anio), k = `${a}-${String(im + 1).padStart(2, '0')}`, v = n.utm[k];
+    return { texto: v ? `La UTM de ${MESES[im]} ${a} es $${v.toLocaleString('de-DE')}. Fuente: sii.cl, valores UTM (la app los actualiza cada mes).`
+      : `No tengo la UTM de ${MESES[im]} ${a} (la última cargada es la de ${mesU}). Revísala en sii.cl > Valores y fechas > UTM; puedes ingresarla en IVA y F29.`, acciones: [{ tipo: 'ir', etiqueta: 'Ir a IVA y F29', vista: 'iva' }] };
+  }
   const pct = (x: number) => `${(x * 100).toLocaleString('es-CL', { maximumFractionDigits: 3 })}%`;
   const lineas = [
     `Normativa actualizada al ${n.actualizado.split('-').reverse().join('-')} (${n.fuente}).`,

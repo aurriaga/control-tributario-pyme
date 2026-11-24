@@ -76,10 +76,12 @@ const djTexto = (d: DJ) => `DJ ${d.n} — ${d.nombre}.\n${d.quien}\nVence (AT 20
 
 function respuestaDJ(t: string): Respuesta {
   const num = t.match(/ dj (\d{4}) /)?.[1];
-  const una = num ? DJS.find(d => String(d.n) === num) : DJS.find(d => new RegExp(` (?:${d.claves})`).test(t));
+  const varias = num ? [] : DJS.filter(d => new RegExp(` (?:${d.claves})`).test(t));
+  const una = num ? DJS.find(d => String(d.n) === num) : varias.length === 1 ? varias[0] : undefined;
   const pie = `Las fechas cambian cada año: confírmalas en el calendario del SII. Fuente: ${FUENTE_DJ}.`;
   if (num && !una) return { texto: `No tengo la DJ ${num} en mi lista (tengo ${DJS.map(d => d.n).join(', ')}). Búscala en el listado oficial: ${FUENTE_DJ}.`, acciones: [] };
   if (una) return { texto: `${djTexto(una)}\n${pie}`, acciones: [] };
+  if (varias.length > 1) return { texto: [`Por lo que me cuentas te tocan ${varias.length} declaraciones juradas:`, ...varias.map(d => `• DJ ${d.n} (vence el ${d.vence.split(';')[0]}): ${d.quien}`), pie].join('\n'), acciones: [] };
   return {
     texto: ['Las declaraciones juradas (DJ) son informes anuales al SII. Con ellas arma la propuesta de renta (F22) y cruza lo que declaran tú, tus trabajadores y tus socios. La mayoría vence en marzo.',
       'Las que más le tocan a una pyme:',
@@ -100,6 +102,14 @@ const CT = 'DL 830, Código Tributario';
 
 // El primero que calza gana: los términos compuestos van antes que los simples ("crédito fiscal" antes que "IVA").
 const GLOSARIO: Termino[] = [
+  // --- casos especiales (antes que los términos generales: "IVA", "activo", "factura")
+  { re: / liquidacion(?:es)?(?: de)? facturas? | liquidacion factura | lf 43 | consignacion | consignatari\w* | mandatari\w* /, texto: () => 'Liquidación-factura (documento 43): la emite el mandatario (una feria, un consignatario o un comisionista) cuando vende algo por cuenta de la empresa. Trae dos partes: la venta, que para la empresa es venta con su IVA débito, y la comisión que el mandatario descuenta. En el RCV la venta llega al registro de ventas y la comisión al de compras, con el mismo folio.\nEn la contabilidad: la venta va a ventas y clientes por lo que la feria va a pagar; la comisión es un gasto (en la app, 5105 Comisiones de ventas) y el descuento de la feria la salda. Cómo declarar el IVA de la comisión (crédito, o débito como lo propone el SII) se elige en "IVA y F29".', fuente: 'sii.cl, preguntas frecuentes sobre la liquidación-factura en ventas en consignación (https://www.sii.cl/preguntas_frecuentes/impuestos_mensuales/001_130_1819.htm)', vista: ['Ir a IVA y F29', 'iva'] },
+  { re: / exportaci\w* | exportador\w* /, texto: () => 'Exportaciones: las ventas al exterior no llevan IVA (están exentas), así que no generan débito fiscal. Aun así, el exportador puede recuperar el IVA de las compras que usó para exportar: lo descuenta en el F29 o, si no alcanza, pide su devolución al SII. Por eso un exportador suele acumular remanente. Las facturas de exportación son el documento 110; sus notas de crédito (112) rebajan las exportaciones del mes.', fuente: `${LEY_IVA}, arts. 12 letra D y 36; DS 348 de 1975 (devolución del IVA a exportadores)` },
+  { re: / activos? biologic\w* | ganado | animales | plantaciones? /, texto: () => 'Activo biológico: un animal o una planta viva que la empresa cría o cultiva (ganado, plantaciones). Bajo la NIIF para las PYMES se mide a su valor razonable menos los costos de venta cuando ese valor se puede obtener sin costo o esfuerzo desproporcionado; si no, al costo menos depreciación y deterioro. Los cambios de valor van a resultados. El ganado que se compra para vender es existencia y su costo se rebaja al venderlo.', fuente: 'NIIF para las PYMES, sección 34 (Actividades especiales: agricultura)' },
+  { re: / diesel | petroleo | impuesto especifico /, texto: () => 'Impuesto específico al diésel: va incluido en el precio del petróleo. Las empresas afectas a IVA que usan diésel en maquinaria o vehículos que no circulan habitualmente por calles y caminos públicos (por ejemplo, maquinaria agrícola o de faena) pueden recuperarlo, imputándolo en el F29; hay que respaldar el consumo. Los transportistas de carga tienen otro mecanismo de recuperación parcial. Sin recuperar, el impuesto es parte del costo.', fuente: 'Ley 18.502, art. 7; Ley 19.764 (transportistas de carga)' },
+  { re: / iva (?:diferido|postergad\w*) | postergacion (?:del )?iva | postergar (?:el )?iva /, texto: () => 'Postergación del IVA: las empresas de menor tamaño pueden postergar el pago del IVA de un mes por un plazo que fija la ley, si están al día y cumplen los requisitos; en el F29 se marca la opción y se informa el monto postergado. No es un descuento: el IVA se paga igual, más tarde. Revisa los requisitos vigentes en sii.cl antes de usarla.', fuente: `${LEY_IVA}, art. 64` },
+  // (la jerga convierte "multa" en "multa atraso"; esta entrada es para la multa o el giro que ya llegó)
+  { re: / (?:llego|llegaron|cursaron|pusieron|recibi|tengo|aplicaron)(?: \w+){0,3} multa atraso | multa atraso (?:\w+ ){0,4}(?:que hago|reclam\w*|apel\w*|condon\w*)| giros? del sii | notificaci\w* | citaci\w* /, texto: () => 'Si te llegó una multa o un giro del SII:\n• Revisa en sii.cl (Mi SII) qué es, de qué período y el plazo. Si viene de una notificación o una citación, responde con los respaldos dentro del plazo.\n• Puedes pedir la condonación (rebaja) de multas e intereses; es mayor si te pones al día antes de que te fiscalicen.\n• Si no estás de acuerdo, puedes presentar una reposición administrativa voluntaria (RAV) ante el SII o reclamar ante el Tribunal Tributario y Aduanero, en los plazos que indica la notificación.\n• Si no puedes pagar todo, la TGR da convenios de pago.', fuente: `${CT}, arts. 56, 106, 123 bis y 124; tgr.cl` },
   // --- IVA y documentos
   { re: / remanente /, texto: () => 'Remanente de crédito fiscal: cuando en un mes el crédito fiscal (IVA de compras) es mayor que el débito fiscal (IVA de ventas), la diferencia no se paga ni se pierde: pasa al mes siguiente convertida a UTM, así se reajusta. En el F29 va en el código 77 y entra al mes siguiente en el código 504.', fuente: `${LEY_IVA}, art. 27`, vista: ['Ir a IVA y F29', 'iva'] },
   { re: / credito fiscal /, texto: () => 'Crédito fiscal: el IVA que pagas en tus compras con factura. Se descuenta del IVA de tus ventas en el F29. Solo da derecho a crédito el IVA de facturas (no de boletas) por compras relacionadas con el giro, registradas en el RCV.', fuente: `${LEY_IVA}, art. 23`, vista: ['Ir a IVA y F29', 'iva'] },
@@ -175,12 +185,32 @@ function buscarTermino(t: string): Termino | null {
 }
 
 /** Responde "¿qué es…?" con el glosario tributario y contable, o las DJ. */
-export function responderGlosario(pregunta: string): Respuesta | null {
+export function responderGlosario(pregunta: string, hoy = new Date()): Respuesta | null {
   const t = jerga(pregunta);
   if (/ dj /.test(t)) return respuestaDJ(t);
+  const vence = vencimientoF29(t, hoy);
+  if (vence) return vence;
   const g = buscarTermino(t);
   if (!g) return null;
   return { texto: `${g.texto()}${g.fuente ? `\nFuente: ${g.fuente}.` : ''}`, acciones: g.vista ? [{ tipo: 'ir', etiqueta: g.vista[0], vista: g.vista[1], pestana: g.vista[2] }] : [] };
+}
+
+/** "¿Cuándo vence el F29 de noviembre?": la fecha concreta (día 20 si es facturador electrónico, si no el 12), corrida al
+ *  lunes si cae en fin de semana. Los feriados no se calculan: se advierte. */
+export function vencimientoF29(t: string, hoy = new Date()): Respuesta | null {
+  if (!/ f29 /.test(t) || !/ (?:vence\w*|vencimiento|plazo|hasta cuando|cuando (?:se )?(?:paga|declara)) /.test(t)) return null;
+  const MES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  const i = MES.findIndex(m => t.includes(` ${m} `));
+  if (i < 0) return null;
+  const anioTxt = t.match(/ (20\d\d) /)?.[1];
+  const anio = anioTxt ? Number(anioTxt) : i > hoy.getMonth() + 1 ? hoy.getFullYear() - 1 : hoy.getFullYear();
+  const dia = (d: number) => {
+    const f = new Date(Date.UTC(anio, i + 1, d));
+    const corre = f.getUTCDay() === 6 ? 2 : f.getUTCDay() === 0 ? 1 : 0;
+    const g = new Date(f.getTime() + corre * 86400000);
+    return `${['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'][g.getUTCDay()]} ${g.getUTCDate()} de ${MES[g.getUTCMonth()]} de ${g.getUTCFullYear()}${corre ? ` (el ${d} cae en fin de semana)` : ''}`;
+  };
+  return { texto: `El F29 de ${MES[i]} ${anio} vence el ${dia(20)} si eres facturador electrónico y declaras y pagas por internet; si no, el ${dia(12)}. Si ese día es feriado, el plazo pasa al día hábil siguiente.\nFuente: sii.cl, "¿Cuáles son los plazos para presentar el F29?"; ${CT}, art. 10.`, acciones: [{ tipo: 'ir', etiqueta: 'Ir a IVA y F29', vista: 'iva' }] };
 }
 
 /** El glosario y las DJ como documentos para el buscador de Riffo. */

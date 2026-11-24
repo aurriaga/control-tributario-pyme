@@ -4,7 +4,9 @@ import { buscarAyuda, diagnosticar, aplicarArreglo, intencion, respuestaNormativ
 import { proponerAsiento, comoManual, type AsientoPropuesto } from './nucleo/asientosAyuda';
 import type { LineaManual } from './nucleo/contabilidad';
 import { pesos } from './formato';
-import { responderTributaria } from './nucleo/tributario';
+import { responderTributaria, type ContextoEmpresa } from './nucleo/tributario';
+import { responderDatos } from './nucleo/consultas';
+import { f29PorPeriodo } from './nucleo/f29';
 import { responderGlosario } from './nucleo/vocabulario';
 import { buscar } from './nucleo/buscador';
 import { temasAyuda } from './nucleo/asistente';
@@ -68,12 +70,22 @@ export default function Asistente({ datos, controles, mes, porClasificar, onIr, 
   }
   const conIA = (r: Mensaje, p: string): Mensaje => ({ ...r, acciones: [...(r.acciones ?? []), { tipo: 'ia', etiqueta: clave ? 'Buscar en fuentes oficiales con IA' : 'Profundizar con IA (opcional)', pregunta: p, contexto: r.texto }] });
 
+  // Tasa del PPM de la empresa para los cálculos: la elegida en IVA y F29 o la del último F29 cargado
+  function contextoEmpresa(): ContextoEmpresa {
+    const t = datos.cfg.tasaPPM;
+    if (t && t.opcion !== 'f29') return { tasaPPM: t.tasa, origenTasaPPM: `${(t.tasa * 100).toLocaleString('es-CL')}%, la elegida en IVA y F29` };
+    const ult = [...f29PorPeriodo(datos.f29s).values()].filter(f => (f.codigos['115'] ?? 0) > 0).sort((a, b) => b.periodo.localeCompare(a.periodo))[0];
+    return ult ? { tasaPPM: ult.codigos['115'], origenTasaPPM: `${(ult.codigos['115'] * 100).toLocaleString('es-CL')}%, la del F29 de ${periodoLegible(ult.periodo)}` } : {};
+  }
+
   function preguntar(q: string) {
     const p = q.trim(); if (!p) return;
     const i = intencion(p);
     let r: Mensaje;
     let autoIA = false;
-    if (i === 'tributaria') r = { de: 'app', ...(responderTributaria(p) ?? responderGlosario(p) ?? NO_ENTENDI) };
+    if (i === 'charla') r = /gracias/i.test(p) ? { de: 'app', texto: 'De nada. Si necesitas algo más, pregúntame: puedo revisar tu empresa, decirte qué falta del mes o contarte cuánto vendiste, pagaste o debes.' } : { de: 'app', ...SALUDO };
+    else if (i === 'datos') r = { de: 'app', ...(responderDatos(p, datos) ?? buscarAyuda(p) ?? responderGlosario(p) ?? NO_ENTENDI) };
+    else if (i === 'tributaria') r = { de: 'app', ...(responderTributaria(p, new Date(), contextoEmpresa()) ?? responderGlosario(p) ?? NO_ENTENDI) };
     else if (i === 'glosario') r = { de: 'app', ...(responderGlosario(p) ?? buscarAyuda(p) ?? NO_ENTENDI) };
     else if (i === 'buscar') {
       const b = buscar(p);
@@ -85,7 +97,7 @@ export default function Asistente({ datos, controles, mes, porClasificar, onIr, 
       const a = proponerAsiento(p, datos.cfg.plan);
       r = a ? { de: 'app', texto: `Te propongo este asiento: ${a.titulo.toLowerCase()}. Revísalo antes de agregarlo.`, asiento: a }
         : { de: 'app', texto: 'Para armar el asiento necesito la operación y el monto. Por ejemplo: "vendí 1.190.000 con boleta en efectivo", "compré un notebook en 800.000 neto con transferencia", "depreciación de una camioneta de 15.000.000" o "boleta de honorarios de 300.000".' };
-    } else r = i === 'normativa' ? { de: 'app', ...respuestaNormativa() } : i === 'revisar' ? revisar() : i === 'falta' ? falta() : { de: 'app', ...(buscarAyuda(p) ?? responderGlosario(p) ?? buscar(p, temasAyuda()) ?? NO_ENTENDI) };
+    } else r = i === 'normativa' ? { de: 'app', ...respuestaNormativa(new Date(), p) } : i === 'revisar' ? revisar() : i === 'falta' ? falta() : { de: 'app', ...(buscarAyuda(p) ?? responderGlosario(p) ?? buscar(p, temasAyuda()) ?? NO_ENTENDI) };
     if (r.texto === NO_ENTENDI.texto) { r = conIA(r, p); autoIA = !!clave; }
     else if (i === 'tributaria' || i === 'glosario' || i === 'normativa') r = conIA(r, p);
     setMensajes(m => [...m, { de: 'yo', texto: p }, r]); setTexto(''); setConfirmar(null);
