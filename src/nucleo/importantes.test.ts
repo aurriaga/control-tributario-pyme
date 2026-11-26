@@ -99,11 +99,11 @@ describe('pagos con tarjeta y nombre del banco', () => {
     expect([s.confianza, s.docs]).toEqual(['Media', [docs[1].clave]]);
     expect(s.motivo).toMatch(/Pago con tarjeta/);
   });
-  it('la cartola histórica del Banco de Chile se reconoce aunque no diga el nombre del banco', async () => {
+  it('la cartola histórica de Santander se reconoce aunque no diga el nombre del banco', async () => {
     const { clasificar: clasificarDoc } = await import('./clasificar');
     const filas = [['Cartolas históricas de Cuentas'], ['Empresa:', 'EMPRESA DE PRUEBA SPA'], ['Cuenta Corriente N°: 0-000-1234567-8', '', 'Moneda: PESOS DE CHILE'],
       ['Fecha', 'Descripción', 'Cargos (CLP)', 'Abonos (CLP)', 'Saldo (CLP)'], ['02/01/2026', 'TRASPASO', '1000', '', '5000']];
     const c = { formato: 'planilla' as const, texto: filas.map(f => f.join(';')).join('\n'), hojas: [{ nombre: 'Cartola Historica CtaCte', filas }], ocr: false };
-    expect(clasificarDoc('CartolaHistCtaCte-1.xlsx', c)).toMatchObject({ tipo: 'CARTOLA', banco: 'Banco de Chile' });
+    expect(clasificarDoc('CartolaHistCtaCte-1.xlsx', c)).toMatchObject({ tipo: 'CARTOLA', banco: 'Santander' });
   });
 });
