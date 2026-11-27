@@ -40,11 +40,14 @@ export function formatearRUT(rut: unknown): string {
   return Number(cuerpo).toLocaleString('de-DE') + '-' + dv;   // de-DE usa "." como separador de miles
 }
 
-/** Primer RUT válido del tipo 12345678-5 dentro de un nombre de archivo del SII ('' si no hay). */
+/** Primer RUT válido del tipo 12345678-5 dentro de un nombre de archivo del SII ('' si no hay). Algunos archivos del RCV
+ *  (el resumen: "RCV_RESUMEN_VENTA_12345678_202602.csv") traen el RUT sin dígito verificador: se calcula. */
 export function rutEnNombre(nombre: string): string {
   for (const m of nombre.matchAll(/(\d{7,8}-[\dkK])/g)) {
     const rut = formatearRUT(m[1]);
     if (rutValido(rut)) return rut;
   }
+  const sinDV = nombre.match(/^RCV_[A-Z_]*?_(\d{7,8})_20\d\d(?:0[1-9]|1[0-2])\b/i);
+  if (sinDV) return formatearRUT(`${sinDV[1]}-${calcularDV(Number(sinDV[1]))}`);
   return '';
 }

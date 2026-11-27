@@ -5,10 +5,10 @@ import { normalizar, periodoEnTexto } from './texto';
 import { formatearRUT, rutValido, rutEnNombre } from './rut';
 
 export type TipoDoc = 'RCV_COMPRA' | 'RCV_VENTA' | 'CARTOLA' | 'F29' | 'F22' | 'CARPETA_TRIBUTARIA' | 'REMUNERACIONES'
-  | 'HONORARIOS' | 'LIBRO_DIARIO' | 'FACTURA' | 'BOLETA' | 'DESCONOCIDO';
+  | 'HONORARIOS' | 'LIBRO_DIARIO' | 'FACTURA' | 'BOLETA' | 'RCV_RESUMEN' | 'DESCONOCIDO';
 
 export const NOMBRE_TIPO: Record<TipoDoc, string> = {
-  RCV_COMPRA: 'RCV de compras', RCV_VENTA: 'RCV de ventas', CARTOLA: 'Cartola bancaria', F29: 'Formulario 29',
+  RCV_COMPRA: 'RCV de compras', RCV_VENTA: 'RCV de ventas', RCV_RESUMEN: 'Resumen del RCV', CARTOLA: 'Cartola bancaria', F29: 'Formulario 29',
   F22: 'Formulario 22', CARPETA_TRIBUTARIA: 'Carpeta tributaria', REMUNERACIONES: 'Libro de remuneraciones',
   HONORARIOS: 'Boletas de honorarios', LIBRO_DIARIO: 'Libro Diario', FACTURA: 'Factura', BOLETA: 'Boleta o voucher',
   DESCONOCIDO: 'No reconocido',
@@ -83,6 +83,10 @@ export function clasificar(nombre: string, c: Contenido): Clasificacion {
     return r('RCV_COMPRA', 'alta', 'Tiene las columnas del Registro de Compras del SII (RUT Proveedor, IVA recuperable).');
   if (cabTiene('rutcliente') || (tiene('rutcliente') && tiene('montoiva')))
     return r('RCV_VENTA', 'alta', 'Tiene las columnas del Registro de Ventas del SII (Rut cliente, monto IVA).');
+  // Resumen del RCV ("Tipo Documento; Total Documentos; Monto Exento; Monto Neto; Monto IVA; Monto Total"): no trae fecha,
+  // RUT ni folio, por eso se reconoce antes que la regla de "texto sin tabla"
+  if (tiene('tipodocumento') && tiene('totaldocumentos') && tiene('montototal'))
+    return r('RCV_RESUMEN', 'alta', 'Es el resumen del Registro de Compras y Ventas del SII: totales por tipo de documento.');
   // Un texto suelto sin tabla (notas, instrucciones) no es un libro ni una cartola aunque los nombre
   if (c.formato === 'texto' && cab.length < 3)
     return r('DESCONOCIDO', 'baja', 'Es un texto sin tabla de datos (parece una nota o instrucciones).');

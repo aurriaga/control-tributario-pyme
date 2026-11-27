@@ -2,7 +2,7 @@
 // remuneraciones, honorarios, F29 y banco), Libro Diario, Mayor, Balance de 8 columnas, Estado de Resultados y controles.
 // Equivale a modContabilidad.bas. Todo el banco entra al Diario según el estado de cada movimiento, así el mayor del
 // banco siempre es igual a la cartola: lo que no se sabe qué es queda en cuentas transitorias (1199 y 2190).
-import { signoDoc, esComisionLF, type Documento, type IvaComisionLF } from './rcv';
+import { signoDoc, esComisionLF, esResumen, type Documento, type IvaComisionLF } from './rcv';
 import type { Movimiento } from './cartola';
 import { f29PorPeriodo, type F29 } from './f29';
 import { resumenPersonal, cuerposTrabajadores, type LibroRemuneraciones, type MesHonorarios } from './remuneraciones';
@@ -320,7 +320,7 @@ export function generarAsientos(e: Entradas, cfg: ConfigContable): ResultadoAsie
   const consolidado = new Map<string, { suma: number; n: number; fecha: string }>();
   for (const d of docs.filter(x => x.libro === 'VENTA' && !cubre(x.fechaEmision))) {
     const s = signo(d), tot = d.total * s, neto = (d.neto + d.exento) * s, iva = d.iva * s, otros = tot - neto - iva;
-    const a = nuevo(d.fechaEmision, `${s < 0 ? 'Rebaja de venta' : 'Venta'}: ${nombreDoc(d.tipoDoc)} N° ${d.folio} - ${d.razonSocial}`, String(d.folio), 'Ventas', `V|${d.clave}`);
+    const a = nuevo(d.fechaEmision, esResumen(d) ? `Venta: ${d.razonSocial}, ${mesTexto(d.periodoRCV)} (resumen del RCV)` : `${s < 0 ? 'Rebaja de venta' : 'Venta'}: ${nombreDoc(d.tipoDoc)} N° ${d.folio} - ${d.razonSocial}`, esResumen(d) ? `Resumen ${d.periodoRCV}` : String(d.folio), 'Ventas', `V|${d.clave}`);
     L(a, CLIENTES, tot); L(a, C.VENTAS, -neto); L(a, IVA_DF, -iva);
     // En una liquidación-factura el mandatario descuenta su comisión: se salda con su documento en el registro de compras
     if ((d.tipoDoc === 40 || d.tipoDoc === 43) && otros < 0) L(a, PROVEEDORES, -otros); else L(a, IMPUESTOS, -otros);
@@ -424,7 +424,7 @@ export function generarAsientos(e: Entradas, cfg: ConfigContable): ResultadoAsie
   return { asientos, avisos, sinCuenta: [...sinCuenta].sort(), manualesRechazados: rechazados };
 }
 
-const NOMBRES: Record<number, string> = { 33: 'Factura', 34: 'Factura exenta', 46: 'Factura de compra', 56: 'Nota de débito', 61: 'Nota de crédito', 40: 'Liquidación-factura', 43: 'Liquidación-factura', 110: 'Factura de exportación', 914: 'Declaración de ingreso' };
+const NOMBRES: Record<number, string> = { 35: 'Boleta', 38: 'Boleta exenta', 39: 'Boleta electrónica', 41: 'Boleta exenta electrónica', 48: 'Comprobante de pago electrónico', 33: 'Factura', 34: 'Factura exenta', 46: 'Factura de compra', 56: 'Nota de débito', 61: 'Nota de crédito', 40: 'Liquidación-factura', 43: 'Liquidación-factura', 110: 'Factura de exportación', 914: 'Declaración de ingreso' };
 const nombreDoc = (t: number) => NOMBRES[t] ?? `Documento ${t}`;
 
 // ------------------------------------------------------------------ Libro Diario y Mayor

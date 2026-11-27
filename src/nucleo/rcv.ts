@@ -187,3 +187,70 @@ function textoOtrosImpuestos(fila: string[], campo: Campo): string {
   const valor = parseMonto(campo(fila, 'valorotroimpuesto')) + parseMonto(campo(fila, 'valorotroimp'));
   return cod ? `Otros imp. SII cód ${cod}: $${valor.toLocaleString('de-DE')}.` : '';
 }
+
+// ------------------------------------------------------------------ resumen del RCV
+/** Tipos de documento que el SII entrega solo como total mensual en el resumen del registro de ventas (no en el detalle):
+ *  boletas (35, 38, 39, 41) y comprobantes de pago electrónico o vouchers de tarjeta (48). */
+export const SOLO_EN_RESUMEN = new Set([35, 38, 39, 41, 48]);
+/** RUT genérico del consumidor final que usa el SII para las ventas con boleta. */
+export const RUT_CONSUMIDOR_FINAL = '66.666.666-6';
+const finDeMes = (p: string) => { const [y, m] = p.split('-').map(Number); return `${p}-${String(new Date(Date.UTC(y, m, 0)).getUTCDate()).padStart(2, '0')}`; };
+export const esResumen = (d: Pick<Documento, 'origen'>) => d.origen.startsWith('RCV resumen');
+
+/** Lee el resumen del RCV ("Descargar resumen": una fila por tipo de documento con su cantidad y montos). De ventas se
+ *  cargan las boletas y los comprobantes de pago (no vienen en el detalle) como un documento por tipo y mes; las facturas
+ *  y notas se informan, porque vienen en el detalle del RCV y se cargan desde ahí. De compras no se carga nada. */
+export function importarResumenRCV(nombreArchivo: string, contenido: Uint8Array | string, op: OpcionesImportacion): ResultadoImportacion {
+  const res: ResultadoImportacion = { archivo: nombreArchivo, libro: null, documentos: [], duplicados: 0, lineasInvalidas: 0, avisos: [], error: null, mensaje: '' };
+  const falla = (msg: string) => { res.error = msg; res.mensaje = `${nombreArchivo}: ${msg}`; return res; };
+  const texto = typeof contenido === 'string' ? contenido : decodificar(contenido);
+  const lineas = texto.replace(/\r\n?/g, '\n').split('\n').filter(l => l.trim());
+  const ie = lineas.findIndex(l => { const n = normalizar(l); return n.includes('tipodocumento') && n.includes('totaldocumentos'); });
+  if (ie < 0) return falla('no tiene el encabezado del resumen del RCV (Tipo Documento, Total Documentos, montos).');
+  const sep = detectarSeparador(lineas[ie]);
+  const mapa = new Map<string, number>();
+  separarCSV(lineas[ie], sep).forEach((c, i) => mapa.set(normalizar(c), i));
+  const nom = normalizar(nombreArchivo), cuerpo = normalizar(texto.slice(0, 500));
+  const libro: Libro | null = /venta/.test(nom) || /venta/.test(cuerpo) ? 'VENTA' : /compra/.test(nom) || /compra/.test(cuerpo) ? 'COMPRA' : null;
+  if (!libro) return falla('no se sabe si es el resumen de ventas o de compras: el nombre del archivo del SII lo dice (RESUMEN_VENTA o RESUMEN_COMPRA).');
+  res.libro = libro;
+  const activa = op.empresas[0]?.rut ?? '';
+  const rutArch = rutEnNombre(nombreArchivo);
+  if (rutArch && !op.empresas.some(e => e.rut === rutArch))
+    return falla(`es de la empresa RUT ${rutArch}, que no está registrada. No se importa, para no mezclarla con ${activa || 'otra empresa'}. Si corresponde, agrégala primero en Empresas.`);
+  const empresa = rutArch || activa;
+  if (!empresa) return falla('no hay empresa registrada.');
+  const periodo = periodoEnTexto(nombreArchivo) || op.periodoManual || '';
+  if (!periodo) return falla('no se sabe de qué mes es: el nombre del archivo del SII trae el período (AAAAMM).');
+
+  const col = (fila: string[], k: string) => { const i = mapa.get(k); return i === undefined ? '' : (fila[i] ?? '').trim(); };
+  const claves = op.clavesExistentes ?? new Set<string>();
+  const enDetalle: string[] = [];
+  for (const l of lineas.slice(ie + 1)) {
+    const fila = separarCSV(l, sep);
+    const nombreTipo = col(fila, 'tipodocumento');
+    const tipo = Number(nombreTipo.match(/\((\d{2,3})\)\s*$/)?.[1] ?? 0);
+    if (!tipo) { if (nombreTipo) res.lineasInvalidas++; continue; }
+    const cant = parseMonto(col(fila, 'totaldocumentos')), exento = parseMonto(col(fila, 'montoexento')), neto = parseMonto(col(fila, 'montoneto'));
+    const iva = parseMonto(col(fila, 'montoiva')), total = parseMonto(col(fila, 'montototal'));
+    const legible = nombreTipo.replace(/^total mes\s*/i, '').replace(/\s*\(\d+\)\s*$/, '');
+    const $ = (n: number) => '$' + Math.round(n).toLocaleString('de-DE');
+    if (libro === 'COMPRA' || !SOLO_EN_RESUMEN.has(tipo)) { enDetalle.push(`${legible} (${tipo}): ${cant} documentos por ${$(total)}`); continue; }
+    const clave = `${empresa}|R${tipo}|${periodo}`;
+    if (claves.has(clave)) { res.duplicados++; res.avisos.push(`Duplicado omitido ${clave}`); continue; }
+    claves.add(clave);
+    res.documentos.push({
+      libro, clave, empresa, tipoDoc: tipo, folio: Number(periodo.replace('-', '')), fechaEmision: finDeMes(periodo), fechaRecepcion: null,
+      rutContraparte: RUT_CONSUMIDOR_FINAL, razonSocial: `${legible} del mes (${cant} ${cant === 1 ? 'documento' : 'documentos'})`,
+      exento, neto, iva, ivaNoRecuperable: 0, otrosImpuestos: total - exento - neto - iva, total, plazoDias: 0, estado: 'POR COBRAR',
+      origen: `RCV resumen ${nombreArchivo}`, periodoRCV: periodo,
+      observacion: `Total del mes según el resumen del RCV (${cant} ${cant === 1 ? 'documento' : 'documentos'}). El cobro llega al banco en efectivo o por la red de tarjetas: asócialo en Banco.`,
+    });
+  }
+  if (enDetalle.length) res.avisos.push(`${libro === 'COMPRA' ? 'De compras' : 'Facturas y notas'}: vienen en el detalle del RCV, que es el que se carga (Descargar detalle en el SII). ${enDetalle.join('; ')}.`);
+  const n = res.documentos.length;
+  res.mensaje = n ? `${n === 1 ? '1 total mensual cargado' : `${n} totales mensuales cargados`} (boletas o comprobantes de pago, que solo vienen en el resumen).`
+    : libro === 'COMPRA' ? 'Es el resumen del registro de compras: no se carga, porque la app usa el detalle (cada factura con su proveedor).'
+    : res.duplicados ? 'Ese resumen ya estaba cargado.' : 'El resumen no trae boletas ni comprobantes de pago: las facturas se cargan desde el detalle del RCV.';
+  return res;
+}

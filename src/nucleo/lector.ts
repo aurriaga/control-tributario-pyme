@@ -1,7 +1,7 @@
 // Lector de documentos: recibe cualquier archivo, lo extrae, reconoce qué es y lo envía al lector que corresponde.
 import { extraer, type Servicios, type Formato } from './extraer';
 import { clasificar, NOMBRE_TIPO, type Clasificacion, type TipoDoc } from './clasificar';
-import { importarRCV, type Documento, type Empresa } from './rcv';
+import { importarRCV, importarResumenRCV, type Documento, type Empresa } from './rcv';
 import { leerF29, leerF29Carpeta, controlF29, type F29 } from './f29';
 import { leerLibroDiario, type LibroLeido } from './libroDiario';
 import { leerCartola, type Movimiento } from './cartola';
@@ -62,6 +62,16 @@ export async function leerArchivo(nombre: string, bytes: Uint8Array, ctx: Contex
   if (cl.rutEmpresa && !registrada) {
     res.estado = 'otra_empresa';
     res.mensaje = `Es de la empresa RUT ${cl.rutEmpresa}, que no está registrada. No se carga, para no mezclarla con ${ctx.empresas[0]?.rut ?? 'la empresa activa'}.`;
+    return res;
+  }
+  if (cl.tipo === 'RCV_RESUMEN') {
+    const r = importarResumenRCV(nombre, contenido.texto, { empresas: ctx.empresas, clavesExistentes: ctx.clavesExistentes });
+    res.avisos.push(...r.avisos.filter(a => !a.startsWith('Duplicado')));
+    if (r.error) { res.estado = 'error'; res.mensaje = r.error; return res; }
+    res.titulo = `Resumen del RCV de ${r.libro === 'COMPRA' ? 'compras' : 'ventas'}${cl.periodo ? ', ' + periodoLegible(cl.periodo) : ''}`;
+    res.estado = r.documentos.length ? 'leido' : 'reconocido';
+    res.documentos = r.documentos;
+    res.mensaje = r.mensaje;
     return res;
   }
   if (cl.tipo === 'RCV_COMPRA' || cl.tipo === 'RCV_VENTA') {

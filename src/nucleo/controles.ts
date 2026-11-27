@@ -1,6 +1,6 @@
 // Los 17 controles automáticos del Excel (hoja Controles): los 12 contables de contabilidad.ts más los de documentos,
 // banco, UTM, remuneraciones y honorarios.
-import type { Documento } from './rcv';
+import { esResumen, type Documento } from './rcv';
 import type { Movimiento } from './cartola';
 import { f29PorPeriodo, mesVecino, UTM_SII } from './f29';
 import { periodoDe } from './resumen';
@@ -16,7 +16,8 @@ export function observacionesDocumento(d: Documento): string[] {
   const o: string[] = [];
   if (!rutValido(d.rutContraparte)) o.push(`RUT ${d.libro === 'VENTA' ? 'cliente' : 'proveedor'} inválido.`);
   const iva = d.iva + (d.libro === 'COMPRA' ? d.ivaNoRecuperable : 0);
-  if (Math.abs(iva - Math.round(d.neto * 0.19)) > TOL) o.push('IVA distinto del 19% del neto.');
+  // En un total mensual de boletas el SII redondea boleta por boleta: el IVA del total puede diferir en algunos pesos
+  if (!esResumen(d) && Math.abs(iva - Math.round(d.neto * 0.19)) > TOL) o.push('IVA distinto del 19% del neto.');
   if (Math.abs(d.neto + d.exento + iva + d.otrosImpuestos - d.total) > TOL) o.push('Neto + exento + IVA no suma el total.');
   return o;
 }
